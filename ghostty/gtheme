@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# gtheme - fuzzy-pick a Ghostty theme with a live color preview.
+#   Enter applies it: writes `theme = <name>` into your Ghostty config, loads/unloads the
+#   theme's background image (if it has one), and hot-reloads.
+#
+# Background images (works for EVERY theme): for a theme named FOO, drop an image at
+#   ~/.config/ghostty/backgrounds/FOO.{png,jpg,jpeg}  and, optionally, a file
+#   ~/.config/ghostty/backgrounds/FOO.opts  with background-image-* lines (opacity, position,
+#   fit, repeat). Pick FOO -> gtheme loads it. Pick a theme with no matching file -> gtheme
+#   clears the image. Add more picture-themes just by dropping the two files.
+#
+# Modes:  gtheme            pick + apply (fzf)
+#         gtheme --apply FOO   apply FOO non-interactively
+#         gtheme --list        print theme names
+#         gtheme --preview FOO (used internally by fzf)
+#
+# Deps: fzf.  Auto-reload on macOS uses osascript (needs Accessibility permission).
+#   COLORS hot-reload; a background-image change needs a NEW WINDOW (Cmd+N) - Ghostty does
+#   not hot-reload background images.
+#
+# Env:  GTHEME_CONFIG=<path>  target a specific config file (used for testing).
+set -eu
+
+CFGDIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
+USER_THEMES="$CFGDIR/themes"
+BG_DIR="$CFGDIR/backgrounds"
+APP_THEMES=""
+for a in \
+  "/Applications/Ghostty.app/Contents/Resources/ghostty/themes" \
+  "$HOME/Applications/Ghostty.app/Contents/Resources/ghostty/themes" \
+  "/usr/share/ghostty/themes"; do
+  [ -d "$a" ] && { APP_THEMES="$a"; break; }
+done
+
+CFG=""
+for c in \
+  "$HOME/Library/Application Support/com.mitchellh.ghostty/config" \
+  "$CFGDIR/config"; do
+  [ -f "$c" ] && { CFG="$c"; break; }
+done
+[ -z "$CFG" ] && CFG="$CFGDIR/config"
+CFG="${GTHEME_CONFIG:-$CFG}"
+
+theme_file() {
+  [ -f "$USER_THEMES/$1" ] && { printf '%s\n' "$USER_THEMES/$1"; return 0; }
+  [ -n "$APP_THEMES" ] && [ -f "$APP_THEMES/$1" ] && printf '%s\n' "$APP_THEMES/$1"
+  return 0
+}
+bg_image() {
+  local ext
+  for ext in png jpg jpeg; do
+    [ -f "$BG_DIR/$1.$ext" ] && { printf '%s\n' "$BG_DIR/$1.$ext"; return 0; }
+  done
+  return 0
+}
+hexrgb() { local h="${1#\#}"; printf '%d;%d;%d' "0x${h:0:2}" "0x${h:2:2}" "0x${h:4:2}"; }
+key() { grep -iE "^[[:space:]]*$1[[:space:]]*=" "$2" 2>/dev/null | head -1 | grep -oiE '#[0-9a-f]{6}' | head -1; }
+pal() { grep -iE "^[[:space:]]*palette[[:space:]]*=[[:space:]]*$1=" "$2" 2>/dev/null | head -1 | grep -oiE '#[0-9a-f]{6}' | head -1; }
+
+# ---------- preview ----------
+if [ "${1:-}" = "--preview" ]; then
+  n="${2:-}"; f="$(theme_file "$n")"
+  [ -z "$f" ] && { printf '\n  (no theme file for %s)\n' "$n"; exit 0; }
+  bg="$(key background "$f")"; fg="$(key foreground "$f")"
+  printf '\n  \033[1m%s\033[0m' "$n"
+  [ -n "$(bg_image "$n")" ] && printf '   \033[2m[+ background image]\033[0m'
+  printf '\n  bg %s   fg %s\n\n' "${bg:-?}" "${fg:-?}"
+  for row in 0 8; do
+    printf '  '
+    for i in $(seq "$row" $((row+7))); do
+      c="$(pal "$i" "$f")"
+      if [ -n "$c" ]; then printf '\033[48;2;%sm    \033[0m ' "$(hexrgb "$c")"; else printf '     '; fi
+    done
+    printf '\n'
+  done
+  if [ -n "$bg" ] && [ -n "$fg" ]; then
+    printf '\n  \033[48;2;%s;38;2;%sm  the quick brown fox  0123 {AaBb}  \033[0m\n' "$(hexrgb "$bg")" "$(hexrgb "$fg")"
+    printf '  \033[48;2;%sm ' "$(hexrgb "$bg")"
+    for i in 1 2 3 4 5 6; do c="$(pal "$i" "$f")"; [ -n "$c" ] && printf '\033[38;2;%smsample ' "$(hexrgb "$c")"; done
+    printf '\033[0m\n'
+  fi
+  exit 0
+fi
+
+names() {
+  { ls "$USER_THEMES" 2>/dev/null; [ -n "$APP_THEMES" ] && ls "$APP_THEMES" 2>/dev/null; } \
+    | grep -vE '\.(bak|tmp|swp|orig|opts)$' | grep -v '^\.' | sort -u
+}
+[ "${1:-}" = "--list" ] && { names; exit 0; }
+
+apply_theme() {
+  local choice="$1"
+  # 1) theme = choice
+  if grep -qiE '^[[:space:]]*theme[[:space:]]*=' "$CFG" 2>/dev/null; then
+    local tmp; tmp="$(mktemp)"
+    awk -v t="$choice" 'BEGIN{d=0} /^[[:space:]]*theme[[:space:]]*=/ && !d {print "theme = " t; d=1; next} {print}' "$CFG" > "$tmp"
+    mv "$tmp" "$CFG"
+  else
+    printf 'theme = %s\n' "$choice" >> "$CFG"
+  fi
+  # 2) load/unload background image (gtheme owns the background-image block)
+  local BS="# >>> gtheme bg >>>" BE="# <<< gtheme bg <<<" img tmp
+  img="$(bg_image "$choice")"
+  tmp="$(mktemp)"
+  awk -v bs="$BS" -v be="$BE" '
+    $0==bs{inb=1}
+    inb==1{ if($0==be) inb=0; next }
+    /^[[:space:]]*background-image([[:space:]]*=|-)/ {next}
+    {print}
+  ' "$CFG" > "$tmp"
+  mv "$tmp" "$CFG"
+  if [ -n "$img" ]; then
+    {
+      printf '%s\n' "$BS"
+      printf 'background-image = %s\n' "$img"
+      if [ -f "$BG_DIR/$choice.opts" ]; then
+        grep -vE '^[[:space:]]*#' "$BG_DIR/$choice.opts"
+      else
+        printf 'background-image-opacity = 0.85\nbackground-image-position = center\nbackground-image-fit = cover\nbackground-image-repeat = false\n'
+      fi
+      printf '%s\n' "$BE"
+    } >> "$CFG"
+  fi
+  echo "gtheme: theme = $choice"
+  [ -n "$img" ] && echo "gtheme: background loaded ($img)" || echo "gtheme: background cleared"
+  # 3) reload (skip when targeting a test config)
+  if [ -z "${GTHEME_CONFIG:-}" ]; then
+    if [ "$(uname)" = "Darwin" ]; then
+      osascript -e 'tell application "System Events" to keystroke "," using {command down, shift down}' 2>/dev/null \
+        && echo "gtheme: reloaded." \
+        || echo "gtheme: applied - press Cmd+Shift+, to reload."
+    fi
+  fi
+}
+
+if [ "${1:-}" = "--apply" ]; then
+  [ -n "${2:-}" ] || { echo "usage: gtheme --apply <theme>" >&2; exit 1; }
+  apply_theme "$2"; exit 0
+fi
+
+command -v fzf >/dev/null || { echo "gtheme: needs fzf (brew install fzf)" >&2; exit 1; }
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+current="$(grep -iE '^[[:space:]]*theme[[:space:]]*=' "$CFG" 2>/dev/null | head -1 | sed -E 's/^[^=]*=[[:space:]]*//')"
+choice="$(names | fzf --ansi --height=90% --layout=reverse --border --prompt='ghostty theme > ' \
+  --header="Enter = apply + reload    current: ${current:-none}" \
+  --preview="bash '$SELF' --preview {}" --preview-window='right:58%:wrap')" || exit 0
+[ -z "$choice" ] && exit 0
+apply_theme "$choice"
