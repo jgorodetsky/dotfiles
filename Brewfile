@@ -1,26 +1,26 @@
-# Brewfile — packages for a fresh machine. `brew bundle` installs what's missing.
+# packages installed by brew bundle. install.sh reads this file to build its health-check.
+# format per line:  brew|cask "name"   # short description  (install.sh parses both).
 
+tap "hashicorp/tap"
 tap "jgorodetsky/ghh"
 
-# core cli
-brew "gh"
-brew "jq"
-brew "ripgrep"
-brew "fzf"
-brew "tree"
+# core-cli
+brew "gh"        # GitHub CLI
+brew "jq"        # JSON processor
+brew "ripgrep"   # fast code search (rg)
+brew "fzf"       # fuzzy finder
+brew "tree"      # directory tree
+brew "stow"      # symlink manager for dotfiles
 
-# languages / iac
-brew "go"
-brew "ruff"
-brew "terraform"
-brew "helm"
+# languages
+brew "go"        # Go toolchain
+brew "ruff"      # Python linter / formatter
+brew "hashicorp/tap/terraform"  # Terraform (via HashiCorp tap; removed from core on BUSL relicense)
+brew "helm"      # Kubernetes package manager
 
-# dotfiles: symlink manager used by install.sh
-brew "stow"
-
-# git workflow tool
-brew "ghh"
+# tools
+brew "ghh"       # git + GitHub workflow (your tap)
 
 # apps
-cask "ghostty"
-cask "visual-studio-code"
+cask "ghostty"                                    # terminal
+cask "visual-studio-code", args: { adopt: true }  # editor (adopt an existing install)

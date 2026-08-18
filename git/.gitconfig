@@ -1,5 +1,6 @@
-# behavior only — NO identity here. name / email / signingkey / gpgsign live in
-# ~/.gitconfig.local (untracked), set per machine. see git/.gitconfig.local.example.
+# behavior only — NO identity here. this file is INCLUDED from your real ~/.gitconfig
+# (install.sh adds the include line), so your global identity + creds live in ~/.gitconfig
+# and are never written into this tracked repo.
 
 [init]
 	defaultBranch = main
@@ -9,5 +10,3 @@
 	helper = osxkeychain
 [url "https://github.com/"]
 	insteadOf = git@github.com:
-[include]
-	path = ~/.gitconfig.local

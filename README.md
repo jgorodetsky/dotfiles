@@ -1,7 +1,7 @@
 # dotfiles
 
-Reproducible macOS dev environment. One command on a fresh machine installs the
-toolchain, shell config, and terminal setup.
+Reproducible macOS dev environment. `./install.sh` runs a health check, shows what's
+already installed (and where), and lets you fuzzy-pick what to add from the diff.
 
 ## Install
 
@@ -11,30 +11,36 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-`install.sh` is idempotent — safe to re-run; it skips whatever is already installed.
+- `./install.sh` — health-check, then fuzzy-pick what to install (ALL / by class / by feature)
+- `./install.sh --all` — install everything missing, no prompt
+- `./install.sh --check` — health-check only, installs nothing
 
-## What it sets up
+Safe to re-run and safe to `git pull` over an existing setup — it only touches what's missing.
+
+## What it manages
 
 | Path | What |
 |------|------|
-| `Brewfile` | packages (cli, iac, terminal, editor) installed via `brew bundle` |
-| `install.sh` | Xcode CLT, Homebrew, packages, config symlinks, macos defaults, ghostty theme |
+| `Brewfile` | packages (cli, languages, terminal, editor); also the source for the health-check |
+| `install.sh` | health-check + fuzzy installer: Homebrew, packages, config, ghostty theme |
 | `shell/.zprofile` | login env: Homebrew + PATH (kept unique) |
-| `shell/.zshrc` | ghh + git aliases |
-| `git/.gitconfig` | behavior only — identity is per-machine (see below) |
-| `macos/defaults.sh` | minimal system defaults (key repeat, file extensions, screenshots) |
-| `ghostty/` | ChessKing terminal theme + `gtheme` picker (see `ghostty/README.md`) |
+| `shell/.zshrc` | completions, ghh, gtheme alias, git aliases |
+| `git/.gitconfig` | behavior only — included from your real `~/.gitconfig` (see below) |
+| `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
+| `ghostty/` | ChessKing theme + `gtheme` picker (see `ghostty/README.md`) |
 | `claude/commands/` | Claude Code slash commands |
 
-Config is symlinked with [GNU Stow](https://www.gnu.org/software/stow/), so editing a
-file in the repo takes effect immediately.
+Config is symlinked with [GNU Stow](https://www.gnu.org/software/stow/) (shell only), so
+editing a file in the repo takes effect immediately.
 
-## Git identity (per machine)
+## Git identity
 
-`git/.gitconfig` carries no name, email, or signing key — set them per machine in an
-untracked `~/.gitconfig.local`:
+`install.sh` adds an `[include]` of this repo's `git/.gitconfig` to your **real** `~/.gitconfig`
+— it never symlinks it, so global git writes never land in the repo. Set identity the normal way:
 
 ```bash
-cp git/.gitconfig.local.example ~/.gitconfig.local
-$EDITOR ~/.gitconfig.local
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"
 ```
+
+Those write to `~/.gitconfig` (untracked, machine-specific); the repo stays identity-free.

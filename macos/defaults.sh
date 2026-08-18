@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# minimal, uncontroversial macos defaults. opt-in — run it yourself or from bootstrap.
+# minimal, uncontroversial macos defaults. opt-in — run it yourself or via install.sh.
 set -euo pipefail
 
-# faster key repeat
+# faster key repeat (needs a re-login to take effect)
 defaults write -g InitialKeyRepeat -int 15
 defaults write -g KeyRepeat -int 2
 
@@ -13,4 +13,8 @@ defaults write NSGlobalDomain AppleShowAllExtensions -bool true
 mkdir -p "$HOME/Screenshots"
 defaults write com.apple.screencapture location "$HOME/Screenshots"
 
-echo "macos defaults applied. some changes need a logout or a Finder/SystemUIServer restart."
+# reload the services that read these so changes apply now (|| true: never abort the run)
+killall Finder >/dev/null 2>&1 || true
+killall SystemUIServer >/dev/null 2>&1 || true
+
+echo "macos defaults applied (Finder + SystemUIServer reloaded). key repeat takes effect after re-login."

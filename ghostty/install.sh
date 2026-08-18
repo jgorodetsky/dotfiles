@@ -25,6 +25,10 @@ cp "$DIR/backgrounds/ChessKing.opts" "$BG_DIR/ChessKing.opts"
 cp "$DIR/gtheme"                     "$GHOSTTY_DIR/gtheme"
 chmod +x "$GHOSTTY_DIR/gtheme"
 
+# make gtheme runnable as a bare command: symlink into ~/.local/bin (on PATH via .zprofile)
+mkdir -p "$HOME/.local/bin"
+ln -sf "$GHOSTTY_DIR/gtheme" "$HOME/.local/bin/gtheme"
+
 MARK_START="# >>> ChessKing (managed) >>>"
 MARK_END="# <<< ChessKing (managed) <<<"
 BLOCK="$MARK_START
@@ -51,4 +55,4 @@ echo "  board    $BG_DIR/ChessKing.png (+ .opts)"
 echo "  gtheme   $GHOSTTY_DIR/gtheme"
 echo
 echo "Reload Ghostty (macOS: Cmd+Shift+,  Linux: Ctrl+Shift+,) or restart it."
-echo "Switch themes anytime:  $GHOSTTY_DIR/gtheme   (needs fzf: brew install fzf)"
+echo "Switch themes anytime:  gtheme   (command via ~/.local/bin; needs fzf)"
