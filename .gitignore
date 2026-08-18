@@ -1,0 +1,11 @@
+# per-machine git identity — never commit
+.gitconfig.local
+
+# stow backups made by install.sh
+*.pre-dotfiles.bak
+
+# macos
+.DS_Store
+
+# editor scratch
+*.swp

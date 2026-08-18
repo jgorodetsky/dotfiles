@@ -1,0 +1,13 @@
+# behavior only — NO identity here. name / email / signingkey / gpgsign live in
+# ~/.gitconfig.local (untracked), set per machine. see git/.gitconfig.local.example.
+
+[init]
+	defaultBranch = main
+[push]
+	autoSetupRemote = true
+[credential]
+	helper = osxkeychain
+[url "https://github.com/"]
+	insteadOf = git@github.com:
+[include]
+	path = ~/.gitconfig.local

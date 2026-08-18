@@ -1,54 +1,53 @@
 #!/usr/bin/env bash
-# ChessKing + gtheme installer.
-# Installs the ChessKing theme and its board, the gtheme theme picker, and points your
-# Ghostty config at ChessKing. Safe to re-run (idempotent).
+# fresh-machine setup — one and done. idempotent: each step skips what's already there.
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GHOSTTY_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty"
-THEMES_DIR="$GHOSTTY_DIR/themes"
-BG_DIR="$GHOSTTY_DIR/backgrounds"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# config: prefer an existing macOS App Support config, else XDG (same as gtheme)
-CONFIG=""
-for c in "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "$GHOSTTY_DIR/config"; do
-  [ -f "$c" ] && { CONFIG="$c"; break; }
+# 1. xcode command line tools
+xcode-select -p >/dev/null 2>&1 || xcode-select --install
+
+# 2. homebrew — install if missing, then load it into THIS shell
+if ! command -v brew >/dev/null 2>&1; then
+  echo "installing homebrew..."
+  NONINTERACTIVE=1 /bin/bash -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  [ -x "$b" ] && { eval "$("$b" shellenv)"; break; }
 done
-[ -z "$CONFIG" ] && CONFIG="$GHOSTTY_DIR/config"
 
-echo "Installing into $GHOSTTY_DIR"
-mkdir -p "$THEMES_DIR" "$BG_DIR"
+# 3. packages
+brew bundle --file="$DIR/Brewfile"
 
-cp "$REPO_DIR/ghostty/themes/ChessKing"           "$THEMES_DIR/ChessKing"
-cp "$REPO_DIR/ghostty/backgrounds/ChessKing.png"  "$BG_DIR/ChessKing.png"
-cp "$REPO_DIR/ghostty/backgrounds/ChessKing.opts" "$BG_DIR/ChessKing.opts"
-cp "$REPO_DIR/ghostty/gtheme"                     "$GHOSTTY_DIR/gtheme"
-chmod +x "$GHOSTTY_DIR/gtheme"
-
-MARK_START="# >>> ChessKing (managed) >>>"
-MARK_END="# <<< ChessKing (managed) <<<"
-BLOCK="$MARK_START
-theme = ChessKing
-background-image = $BG_DIR/ChessKing.png
-background-image-opacity = 0.6
-background-image-position = center
-background-image-fit = cover
-background-image-repeat = false
-$MARK_END"
-
-touch "$CONFIG"
-if grep -qF "$MARK_START" "$CONFIG"; then
-  echo "ChessKing block already present in $CONFIG - leaving it untouched."
+# 4. link shell + git config (stow). back up any real file in the way first.
+if command -v stow >/dev/null 2>&1; then
+  for f in .zshrc .zprofile .gitconfig; do
+    t="$HOME/$f"
+    [ -e "$t" ] && [ ! -L "$t" ] && mv "$t" "$t.pre-dotfiles.bak"
+  done
+  stow --dir="$DIR" --target="$HOME" --ignore='example$' --restow shell git
 else
-  printf '\n%s\n' "$BLOCK" >> "$CONFIG"
-  echo "Added ChessKing config block to $CONFIG"
+  echo "stow not found; run 'brew install stow' then re-run to link configs"
 fi
 
-echo
-echo "Installed:"
-echo "  theme    $THEMES_DIR/ChessKing"
-echo "  board    $BG_DIR/ChessKing.png (+ .opts)"
-echo "  gtheme   $GHOSTTY_DIR/gtheme"
-echo
-echo "Reload Ghostty (macOS: Cmd+Shift+,  Linux: Ctrl+Shift+,) or restart it."
-echo "Switch themes anytime:  $GHOSTTY_DIR/gtheme   (needs fzf: brew install fzf)"
+# 5. per-machine git identity reminder (never tracked in this repo)
+if [ ! -f "$HOME/.gitconfig.local" ]; then
+  echo "note: set your git identity in ~/.gitconfig.local (see git/.gitconfig.local.example)"
+fi
+
+# 6. macos defaults (key repeat, file extensions, screenshots -> ~/Screenshots)
+bash "$DIR/macos/defaults.sh"
+
+# 7. claude code cli — not a brew package. install it separately if missing.
+command -v claude >/dev/null 2>&1 || \
+  echo "note: install Claude Code separately (native installer; not in Homebrew)"
+
+# 8. claude commands
+mkdir -p "$HOME/.claude/commands"
+cp "$DIR"/claude/commands/*.md "$HOME/.claude/commands/" 2>/dev/null || true
+
+# 9. ghostty theme + gtheme picker
+[ -x "$DIR/ghostty/install.sh" ] && "$DIR/ghostty/install.sh"
+
+echo "done. open a new terminal (or run: exec zsh) to pick up shell changes."

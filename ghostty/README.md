@@ -16,7 +16,7 @@ theme (see below).
 | `ghostty/backgrounds/ChessKing.png` | the chessboard background image (2560x1600) |
 | `ghostty/backgrounds/ChessKing.opts` | background-image opts (opacity/position/fit) for ChessKing |
 | `ghostty/gtheme` | fuzzy theme picker: preview + apply + load/clear backgrounds |
-| `install.sh` | installs the theme, board, and gtheme; points your config at ChessKing |
+| `ghostty/install.sh` | installs the theme, board, and gtheme; points your config at ChessKing |
 | `generator/chess-cyber.html` | the source the board image is rendered from |
 | `generator/render.sh` | re-renders the board PNG from the HTML |
 
@@ -31,13 +31,13 @@ theme (see below).
 ```bash
 git clone https://github.com/jgorodetsky/dotfiles.git
 cd dotfiles
-./install.sh
+./ghostty/install.sh
 ```
 
 Then reload Ghostty: **macOS** `Cmd+Shift+,` / **Linux** `Ctrl+Shift+,` (or restart it).
-`install.sh` is idempotent.
+`ghostty/install.sh` is idempotent.
 
-### What install.sh does
+### What ghostty/install.sh does
 
 1. Copies `ChessKing` into `~/.config/ghostty/themes/`
 2. Copies the board + opts into `~/.config/ghostty/backgrounds/`
@@ -56,7 +56,7 @@ background-image-repeat = false
 The `background-image` line is written as a real absolute path for your user.
 
 > **macOS note:** Ghostty reads `~/Library/Application Support/com.mitchellh.ghostty/config`
-> as well as `~/.config/ghostty/config`. install.sh writes to whichever it finds (App Support
+> as well as `~/.config/ghostty/config`. ghostty/install.sh writes to whichever it finds (App Support
 > first), matching what gtheme uses.
 
 ## Manual install
@@ -87,7 +87,7 @@ The PNG ships pre-rendered. Only needed to change the board itself - edit
 ./generator/render.sh    # writes ghostty/backgrounds/ChessKing.png
 ```
 
-Re-run `./install.sh` afterwards to copy it into place.
+Re-run `./ghostty/install.sh` afterwards to copy it into place.
 
 ## gtheme - a theme picker that actually applies
 
