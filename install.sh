@@ -78,38 +78,40 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
 
 # ---------- health check ----------
 printf '\n%shealth check%s  %s%s%s\n\n' "$B" "$X" "$D" "$DIR" "$X"
-MISSING=()
+MISSING=(); STATUS=()
 for i in "${!IDS[@]}"; do
-  if detect "$i"; then printf '  %s✓%s %-18s %s%s%s\n' "$G" "$X" "${IDS[$i]}" "$D" "$WHERE" "$X"
-  else printf '  %s✗%s %-18s %s%s%s\n' "$R" "$X" "${IDS[$i]}" "$D" "${DESCS[$i]}" "$X"; MISSING+=("$i"); fi
+  if detect "$i"; then STATUS[$i]=ok; printf '  %s✓%s %-18s %s%s%s\n' "$G" "$X" "${IDS[$i]}" "$D" "$WHERE" "$X"
+  else STATUS[$i]=miss; MISSING+=("$i"); printf '  %s✗%s %-18s %s%s%s\n' "$R" "$X" "${IDS[$i]}" "$D" "${DESCS[$i]}" "$X"; fi
 done
 
-if [ "${#MISSING[@]}" -eq 0 ]; then printf '\n%s✓ everything is installed.%s\n' "$G" "$X"; exit 0; fi
-printf '\n%s%s missing:%s ' "$Y" "${#MISSING[@]}" "$X"
-for i in "${MISSING[@]}"; do printf '%s ' "${IDS[$i]}"; done; printf '\n'
-[ "$MODE" = check ] && { printf '\nrun %s./install.sh%s to choose what to add.\n' "$B" "$X"; exit 0; }
+if [ "${#MISSING[@]}" -eq 0 ]; then printf '\n%s✓ everything is installed.%s  %s(pick anything below to re-apply/update)%s\n' "$G" "$X" "$D" "$X"
+else printf '\n%s%s missing:%s ' "$Y" "${#MISSING[@]}" "$X"; for i in "${MISSING[@]}"; do printf '%s ' "${IDS[$i]}"; done; printf '\n'; fi
+[ "$MODE" = check ] && exit 0
 
 # ---------- choose from the diff ----------
 SEL=()
 if [ "$MODE" = all ]; then
+  [ "${#MISSING[@]}" -eq 0 ] && { printf '\n%snothing missing.%s\n' "$G" "$X"; exit 0; }
   SEL=("${MISSING[@]}")
 else
   command -v fzf >/dev/null 2>&1 || brew install fzf >/dev/null
   if [ ! -t 0 ] || [ ! -t 1 ]; then
-    printf '\nnot a terminal — re-run with %s--all%s to install everything missing.\n' "$B" "$X"; exit 0; fi
-  chosen="$( { printf 'ALL\teverything missing (%s)\n' "${#MISSING[@]}"
-      for c in $(for i in "${MISSING[@]}"; do echo "${CLASSES[$i]}"; done | sort -u); do
-        n=0; for i in "${MISSING[@]}"; do [ "${CLASSES[$i]}" = "$c" ] && n=$((n+1)); done
-        printf 'class:%s\twhole %s class (%s)\n' "$c" "$c" "$n"; done
-      for i in "${MISSING[@]}"; do printf '%s\t%s — %s\n' "${IDS[$i]}" "${CLASSES[$i]}" "${DESCS[$i]}"; done
+    printf '\nnot a terminal - re-run with %s--all%s to install everything missing.\n' "$B" "$X"; exit 0; fi
+  chosen="$( { printf 'ALL\t(re)install everything\n'
+      for c in $(for i in "${!IDS[@]}"; do echo "${CLASSES[$i]}"; done | sort -u); do
+        printf 'class:%s\t- whole %s class\n' "$c" "$c"; done
+      for i in "${!IDS[@]}"; do
+        [ "${STATUS[$i]}" = ok ] && m="[installed]" || m="[missing]"
+        printf '%s\t%s %s - %s\n' "${IDS[$i]}" "$m" "${CLASSES[$i]}" "${DESCS[$i]}"; done
     } | fzf -m --delimiter='\t' --with-nth=1,2 --height=90% --layout=reverse --border \
-        --prompt='install > ' --header=$'Tab = mark  ·  Enter = install marked  ·  Esc = cancel' \
+        --prompt='(re)install > ' \
+        --header='pick features (installed ones re-apply/update)   Tab=mark  Enter=go  Esc=cancel' \
       | cut -f1 )"
   [ -z "$chosen" ] && { echo "nothing selected."; exit 0; }
   wa=0; wc=" "; wi=" "
   while IFS= read -r t; do case "$t" in
     ALL) wa=1 ;; class:*) wc="$wc${t#class:} " ;; *) wi="$wi$t " ;; esac; done <<< "$chosen"
-  for i in "${MISSING[@]}"; do
+  for i in "${!IDS[@]}"; do
     if [ "$wa" = 1 ] || [[ "$wc" == *" ${CLASSES[$i]} "* ]] || [[ "$wi" == *" ${IDS[$i]} "* ]]; then SEL+=("$i"); fi
   done
 fi
