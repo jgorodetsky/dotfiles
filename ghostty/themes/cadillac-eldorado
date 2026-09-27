@@ -1,0 +1,23 @@
+# cadillac eldorado - classic chrome
+palette = 0=#2a141a
+palette = 1=#dc4e66
+palette = 2=#9dbf8a
+palette = 3=#d6a65b
+palette = 4=#7f9cc4
+palette = 5=#c77aa0
+palette = 6=#7fb5b0
+palette = 7=#c9ccd1
+palette = 8=#86666e
+palette = 9=#ef6f84
+palette = 10=#b8d9a4
+palette = 11=#f0c987
+palette = 12=#a5bfe0
+palette = 13=#e39cc0
+palette = 14=#a3d4cf
+palette = 15=#f5efe6
+background = #1c0b10
+foreground = #ecdcc8
+cursor-color = #c9ccd1
+cursor-text = #1c0b10
+selection-background = #4a1a26
+selection-foreground = #f5efe6

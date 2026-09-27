@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# ChessKing + gtheme installer (theme only).
-# Installs the ChessKing theme, its board, and the gtheme picker, and points your
-# Ghostty config at ChessKing. Safe to re-run (idempotent).
+# ghostty themes + gtheme installer.
+# Installs every theme in themes/ (ChessKing, cadillac-*), the ChessKing board, and the
+# gtheme picker, and points your Ghostty config at ChessKing. Safe to re-run (idempotent).
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,7 +19,7 @@ done
 echo "Installing into $GHOSTTY_DIR"
 mkdir -p "$THEMES_DIR" "$BG_DIR"
 
-cp "$DIR/themes/ChessKing"           "$THEMES_DIR/ChessKing"
+cp "$DIR"/themes/*                   "$THEMES_DIR/"
 cp "$DIR/backgrounds/ChessKing.png"  "$BG_DIR/ChessKing.png"
 cp "$DIR/backgrounds/ChessKing.opts" "$BG_DIR/ChessKing.opts"
 cp "$DIR/gtheme"                     "$GHOSTTY_DIR/gtheme"
@@ -50,7 +50,7 @@ fi
 
 echo
 echo "Installed:"
-echo "  theme    $THEMES_DIR/ChessKing"
+echo "  themes   $THEMES_DIR/ ($(ls "$DIR/themes" | tr '\n' ' '))"
 echo "  board    $BG_DIR/ChessKing.png (+ .opts)"
 echo "  gtheme   $GHOSTTY_DIR/gtheme"
 echo

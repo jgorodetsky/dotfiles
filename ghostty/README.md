@@ -13,10 +13,11 @@ theme (see below).
 | Path | What it is |
 |------|-----------|
 | `ghostty/themes/ChessKing` | the theme file (palette, foreground, cursor, selection) |
+| `ghostty/themes/cadillac-*` | four dark cherry themes (see [Cadillac themes](#cadillac-themes)) |
 | `ghostty/backgrounds/ChessKing.png` | the chessboard background image (2560x1600) |
 | `ghostty/backgrounds/ChessKing.opts` | background-image opts (opacity/position/fit) for ChessKing |
 | `ghostty/gtheme` | fuzzy theme picker: preview + apply + load/clear backgrounds |
-| `ghostty/install.sh` | installs the theme, board, and gtheme; points your config at ChessKing |
+| `ghostty/install.sh` | installs the themes, board, and gtheme; points your config at ChessKing |
 | `generator/chess-cyber.html` | the source the board image is rendered from |
 | `generator/render.sh` | re-renders the board PNG from the HTML |
 
@@ -88,6 +89,25 @@ The PNG ships pre-rendered. Only needed to change the board itself - edit
 ```
 
 Re-run `./ghostty/install.sh` afterwards to copy it into place.
+
+## Cadillac themes
+
+Four dark cherry palettes, each named for a Cadillac. Colors only, no background image.
+Every ANSI color except bright black clears 4.5:1 contrast on its background.
+
+| Theme | Look | Background | Cursor |
+|-------|------|------------|--------|
+| `cadillac-eldorado` | classic chrome - cherry-black, cream text, gold yellows | `#1c0b10` | chrome `#c9ccd1` |
+| `cadillac-escalade` | blacked out - near-black, cherry accents, highest contrast | `#0d0709` | cherry `#ea2e55` |
+| `cadillac-deville` | full paint - the cherry is the background, champagne text | `#3b0f1c` | gold `#f2c46d` |
+| `cadillac-fleetwood` | dusky wine - muted, lowest eye strain | `#1f1418` | dusty rose `#b5838d` |
+
+`ghostty/install.sh` copies them with the rest of `themes/`. Pick one with `gtheme`
+(type `cadillac`) or set it directly:
+
+```bash
+gtheme --apply cadillac-eldorado
+```
 
 ## gtheme - a theme picker that actually applies
 

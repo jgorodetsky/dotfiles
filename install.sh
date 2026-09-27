@@ -43,7 +43,7 @@ done < "$DIR/Brewfile"
 add_cfg(){ IDS+=("$1"); CLASSES+=(config); DESCS+=("$2"); KINDS+=(config); TARGETS+=("$1"); }
 add_cfg shell   "link .zprofile + .zshrc (stow)"
 add_cfg git     "include repo git config in ~/.gitconfig"
-add_cfg ghostty-theme "ChessKing theme + gtheme picker"
+add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
 add_cfg claude  "laymans slash command"
 add_cfg macos   "key repeat, file extensions, screenshots"
 
@@ -68,7 +68,8 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
       case "$id" in
         shell)   [ -L "$HOME/.zshrc" ] && WHERE="$HOME/.zshrc -> $(readlink "$HOME/.zshrc")" || return 1 ;;
         git)     grep -qsF "$DIR/git/.gitconfig" "$HOME/.gitconfig" && WHERE="$HOME/.gitconfig [include]" || return 1 ;;
-        ghostty-theme) [ -f "$HOME/.config/ghostty/themes/ChessKing" ] && WHERE="$HOME/.config/ghostty/themes/ChessKing" || return 1 ;;
+        ghostty-theme) for t in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${t##*/}" ] || return 1; done
+                       WHERE="$HOME/.config/ghostty/themes ($(ls "$DIR/ghostty/themes" | wc -l | tr -d ' ') themes)" ;;
         claude)  [ -f "$HOME/.claude/commands/laymans.md" ] && WHERE="$HOME/.claude/commands/laymans.md" || return 1 ;;
         macos)   [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] && WHERE="KeyRepeat=2 (applied)" || return 1 ;;
       esac ;;

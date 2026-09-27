@@ -1,0 +1,23 @@
+# cadillac fleetwood - dusky wine
+palette = 0=#2e2025
+palette = 1=#cc6273
+palette = 2=#8fa886
+palette = 3=#c9a46a
+palette = 4=#8595b5
+palette = 5=#a8799e
+palette = 6=#7fa3a0
+palette = 7=#bfb1ad
+palette = 8=#846b71
+palette = 9=#d97d8e
+palette = 10=#aac3a1
+palette = 11=#dcc08e
+palette = 12=#a3b1cd
+palette = 13=#c49aba
+palette = 14=#9dbfbc
+palette = 15=#ece2de
+background = #1f1418
+foreground = #d8c8c4
+cursor-color = #b5838d
+cursor-text = #1f1418
+selection-background = #3e2830
+selection-foreground = #ece2de

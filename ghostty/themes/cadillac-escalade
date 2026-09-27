@@ -1,0 +1,23 @@
+# cadillac escalade - blacked out
+palette = 0=#1a1013
+palette = 1=#ea2e55
+palette = 2=#4fc38a
+palette = 3=#e8b04b
+palette = 4=#5b9bd5
+palette = 5=#cf4c9b
+palette = 6=#4bb8c4
+palette = 7=#b8b2b4
+palette = 8=#76686d
+palette = 9=#ff4d6d
+palette = 10=#7ee0ab
+palette = 11=#ffd27a
+palette = 12=#8cbcf0
+palette = 13=#e878b8
+palette = 14=#7fd9e2
+palette = 15=#ffffff
+background = #0d0709
+foreground = #e6e1e2
+cursor-color = #ea2e55
+cursor-text = #0d0709
+selection-background = #3d0f1a
+selection-foreground = #ffffff

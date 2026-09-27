@@ -27,7 +27,7 @@ Safe to re-run and safe to `git pull` over an existing setup — it only touches
 | `shell/.zshrc` | completions, ghh, gtheme alias, git aliases |
 | `git/.gitconfig` | behavior only — included from your real `~/.gitconfig` (see below) |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
-| `ghostty/` | ChessKing theme + `gtheme` picker (see `ghostty/README.md`) |
+| `ghostty/` | ChessKing + Cadillac themes, `gtheme` picker (see `ghostty/README.md`) |
 | `claude/commands/` | Claude Code slash commands |
 
 Config is symlinked with [GNU Stow](https://www.gnu.org/software/stow/) (shell only), so

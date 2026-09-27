@@ -1,0 +1,23 @@
+# cadillac deville - full paint
+palette = 0=#2a0912
+palette = 1=#ff6b7f
+palette = 2=#a8d8a0
+palette = 3=#f2c46d
+palette = 4=#9ab8f0
+palette = 5=#e59ad6
+palette = 6=#8fd6d0
+palette = 7=#e3cfc4
+palette = 8=#9a6572
+palette = 9=#ff94a3
+palette = 10=#c6ecbf
+palette = 11=#ffe0a3
+palette = 12=#bfd2ff
+palette = 13=#f6c2ec
+palette = 14=#b8ece7
+palette = 15=#fff6ef
+background = #3b0f1c
+foreground = #f6e3d6
+cursor-color = #f2c46d
+cursor-text = #3b0f1c
+selection-background = #6b2034
+selection-foreground = #fff6ef
