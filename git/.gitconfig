@@ -8,5 +8,14 @@
 	autoSetupRemote = true
 [credential]
 	helper = osxkeychain
+# github auth goes through gh: browser login once (gh auth login), token kept in the keychain.
+# the empty helper clears osxkeychain for these hosts so gh is the only one asked.
+# PATH is set so gui apps that launch git without homebrew on PATH still find gh.
+[credential "https://github.com"]
+	helper =
+	helper = !PATH=/opt/homebrew/bin:/usr/local/bin:$PATH gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !PATH=/opt/homebrew/bin:/usr/local/bin:$PATH gh auth git-credential
 [url "https://github.com/"]
 	insteadOf = git@github.com:

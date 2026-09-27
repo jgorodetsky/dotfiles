@@ -142,7 +142,9 @@ if [ "${#cfg[@]}" -gt 0 ]; then for i in "${cfg[@]}"; do
       GC="$HOME/.gitconfig"; [ -L "$GC" ] && rm -f "$GC"; touch "$GC"
       grep -qsF "$DIR/git/.gitconfig" "$GC" || git config --file "$GC" --add include.path "$DIR/git/.gitconfig"
       [ -z "$(git config --get user.email 2>/dev/null || true)" ] && \
-        echo "  set identity:  git config --global user.name '...'  &&  git config --global user.email '...'" || true ;;
+        echo "  set identity:  git config --global user.name '...'  &&  git config --global user.email '...'" || true
+      command -v gh >/dev/null && ! gh auth status >/dev/null 2>&1 && \
+        echo "  log in to github (browser, token goes in keychain):  gh auth login" || true ;;
     ghostty-theme) [ -x "$DIR/ghostty/install.sh" ] && "$DIR/ghostty/install.sh" ;;
     claude)  mkdir -p "$HOME/.claude/commands"; cp "$DIR"/claude/commands/*.md "$HOME/.claude/commands/" 2>/dev/null || true ;;
     macos)   bash "$DIR/macos/defaults.sh" ;;

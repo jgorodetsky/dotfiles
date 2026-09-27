@@ -44,3 +44,16 @@ git config --global user.email "you@example.com"
 ```
 
 Those write to `~/.gitconfig` (untracked, machine-specific); the repo stays identity-free.
+
+## GitHub auth
+
+Git talks to GitHub through `gh`: `git/.gitconfig` sets `gh auth git-credential` as the only
+credential helper for github.com. Log in once and the token lives in the macOS Keychain:
+
+```bash
+gh auth login
+```
+
+No token goes in `~/.gitconfig`, `~/.git-credentials`, or a remote URL. Don't use
+`credential.helper store` or a `url."https://<token>@github.com/".insteadOf` rewrite - both
+keep the token in plain text.
