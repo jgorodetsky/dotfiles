@@ -45,6 +45,7 @@ add_cfg shell   "link .zprofile + .zshrc (stow)"
 add_cfg git     "include repo git config in ~/.gitconfig"
 add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
 add_cfg claude  "laymans slash command"
+add_cfg skills  "agent skills -> ~/.agents/skills + ~/.claude/skills"
 add_cfg macos   "key repeat, file extensions, screenshots"
 
 # ---------- detection ----------
@@ -71,6 +72,9 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
         ghostty-theme) for t in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${t##*/}" ] || return 1; done
                        WHERE="$HOME/.config/ghostty/themes ($(ls "$DIR/ghostty/themes" | wc -l | tr -d ' ') themes)" ;;
         claude)  [ -f "$HOME/.claude/commands/laymans.md" ] && WHERE="$HOME/.claude/commands/laymans.md" || return 1 ;;
+        skills)  for s in "$DIR"/agents/skills/*/; do for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
+                   diff -rq -x __pycache__ "$s" "$t/$(basename "$s")" >/dev/null 2>&1 || return 1; done; done
+                 WHERE="~/.agents/skills + ~/.claude/skills ($(ls "$DIR/agents/skills" | wc -l | tr -d ' ') skills)" ;;
         macos)   [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] && WHERE="KeyRepeat=2 (applied)" || return 1 ;;
       esac ;;
   esac
@@ -147,6 +151,8 @@ if [ "${#cfg[@]}" -gt 0 ]; then for i in "${cfg[@]}"; do
         echo "  log in to github (browser, token goes in keychain):  gh auth login" || true ;;
     ghostty-theme) [ -x "$DIR/ghostty/install.sh" ] && "$DIR/ghostty/install.sh" ;;
     claude)  mkdir -p "$HOME/.claude/commands"; cp "$DIR"/claude/commands/*.md "$HOME/.claude/commands/" 2>/dev/null || true ;;
+    skills)  for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do mkdir -p "$t"
+               for s in "$DIR"/agents/skills/*/; do rsync -a --delete --exclude __pycache__ "$s" "$t/$(basename "$s")/"; done; done ;;
     macos)   bash "$DIR/macos/defaults.sh" ;;
   esac
 done; fi

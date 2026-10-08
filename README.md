@@ -29,6 +29,7 @@ Safe to re-run and safe to `git pull` over an existing setup — it only touches
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
 | `ghostty/` | ChessKing + Cadillac themes, `gtheme` picker (see `ghostty/README.md`) |
 | `claude/commands/` | Claude Code slash commands |
+| `agents/skills/` | [Agent Skills](https://agentskills.io) (`SKILL.md`), copied to `~/.agents/skills` (Codex, Cursor, Gemini CLI, OpenCode, Copilot) and `~/.claude/skills` (Claude Code) |
 
 Config is symlinked with [GNU Stow](https://www.gnu.org/software/stow/) (shell only), so
 editing a file in the repo takes effect immediately.
