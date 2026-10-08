@@ -1,3 +1,8 @@
+---
+name: laymans
+description: Explain concepts from the current conversation, or a given topic, in layman's terms with minimal ASCII diagrams, real analogies and comparison tables. Use when the user asks for a layman's, plain-language or simpler explanation of something.
+---
+
 Explain the concepts from this conversation in layman's terms. Make it dead simple - no jargon, no hand-waving, no "in other words" padding.
 
 ## How to explain
@@ -14,7 +19,7 @@ Explain the concepts from this conversation in layman's terms. Make it dead simp
 
 $ARGUMENTS
 
-If no specific focus was given above, infer the key concepts from the current conversation that would benefit most from a simpler explanation. Prioritize anything that was complex, ambiguous, or glossed over.
+The focus is whatever the user wrote when invoking this skill. If the line above still shows a literal placeholder, read the focus from the user's invoking message instead. If no specific focus was given, infer the key concepts from the current conversation that would benefit most from a simpler explanation. Prioritize anything that was complex, ambiguous, or glossed over.
 
 ## Rules
 

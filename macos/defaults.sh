@@ -2,6 +2,15 @@
 # minimal, uncontroversial macos defaults. opt-in — run it yourself or via install.sh.
 set -euo pipefail
 
+# first run only: save the values this script changes, so they can be restored by hand
+BAK="$HOME/.dotfiles-macos-defaults.bak"
+if [ ! -f "$BAK" ]; then
+  for k in "-g InitialKeyRepeat" "-g KeyRepeat" "NSGlobalDomain AppleShowAllExtensions" "com.apple.screencapture location"; do
+    printf '%s = %s\n' "$k" "$(defaults read $k 2>/dev/null || echo unset)"
+  done > "$BAK"
+  echo "previous values saved to $BAK"
+fi
+
 # faster key repeat (needs a re-login to take effect)
 defaults write -g InitialKeyRepeat -int 15
 defaults write -g KeyRepeat -int 2

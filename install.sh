@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 # dotfiles installer + health check. safe to re-run over an existing setup: it detects
 # what's already installed (green check + where) and only offers to add the diff.
+# it never replaces your files: shell and git get a source/include line appended,
+# anything it would change gets a timestamped .bak first.
 #
-#   ./install.sh          health-check, then fuzzy-pick what to install from the diff
-#   ./install.sh --all    install everything missing (no prompt)
-#   ./install.sh --check  health-check only (report; installs nothing)
+#   ./install.sh                 health-check, then fuzzy-pick what to install from the diff
+#   ./install.sh --all           install everything missing (no prompt)
+#   ./install.sh --check         health-check only (report; installs nothing)
+#   ./install.sh --only a,b      (re)apply just these ids, e.g. --only shell,skills
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODE=pick
+MODE=pick; ONLY=""
 case "${1:-}" in
   --all) MODE=all ;; --check) MODE=check ;; ""|--pick) MODE=pick ;;
-  *) echo "usage: install.sh [--all|--check]" >&2; exit 2 ;;
+  --only) MODE=only; ONLY=",${2:?usage: install.sh --only id[,id...]},"; ;;
+  *) echo "usage: install.sh [--all|--check|--only id,...]" >&2; exit 2 ;;
 esac
+STAMP="$(date +%Y%m%d%H%M%S)"
+MARK_START="# >>> dotfiles >>>"; MARK_END="# <<< dotfiles <<<"
 
 if [ -t 1 ]; then G=$'\033[32m'; R=$'\033[31m'; Y=$'\033[33m'; D=$'\033[2m'; B=$'\033[1m'; X=$'\033[0m'
 else G= R= Y= D= B= X=; fi
@@ -41,10 +47,9 @@ while IFS= read -r line || [ -n "$line" ]; do
 done < "$DIR/Brewfile"
 
 add_cfg(){ IDS+=("$1"); CLASSES+=(config); DESCS+=("$2"); KINDS+=(config); TARGETS+=("$1"); }
-add_cfg shell   "link .zprofile + .zshrc (stow)"
+add_cfg shell   "append a source line to ~/.zprofile + ~/.zshrc"
 add_cfg git     "include repo git config in ~/.gitconfig"
 add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
-add_cfg claude  "laymans slash command"
 add_cfg skills  "agent skills -> ~/.agents/skills + ~/.claude/skills"
 add_cfg macos   "key repeat, file extensions, screenshots"
 
@@ -67,13 +72,13 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
       else return 1; fi ;;
     config)
       case "$id" in
-        shell)   [ -L "$HOME/.zshrc" ] && WHERE="$HOME/.zshrc -> $(readlink "$HOME/.zshrc")" || return 1 ;;
+        shell)   for f in .zprofile .zshrc; do grep -qsF "$DIR/shell/$f" "$HOME/$f" || return 1; done
+                 WHERE="~/.zprofile + ~/.zshrc [dotfiles block]" ;;
         git)     grep -qsF "$DIR/git/.gitconfig" "$HOME/.gitconfig" && WHERE="$HOME/.gitconfig [include]" || return 1 ;;
         ghostty-theme) for t in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${t##*/}" ] || return 1; done
                        WHERE="$HOME/.config/ghostty/themes ($(ls "$DIR/ghostty/themes" | wc -l | tr -d ' ') themes)" ;;
-        claude)  [ -f "$HOME/.claude/commands/laymans.md" ] && WHERE="$HOME/.claude/commands/laymans.md" || return 1 ;;
         skills)  for s in "$DIR"/agents/skills/*/; do for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
-                   diff -rq -x __pycache__ "$s" "$t/$(basename "$s")" >/dev/null 2>&1 || return 1; done; done
+                   diff -rq -x __pycache__ -x .dotfiles "$s" "$t/$(basename "$s")" >/dev/null 2>&1 || return 1; done; done
                  WHERE="~/.agents/skills + ~/.claude/skills ($(ls "$DIR/agents/skills" | wc -l | tr -d ' ') skills)" ;;
         macos)   [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] && WHERE="KeyRepeat=2 (applied)" || return 1 ;;
       esac ;;
@@ -98,6 +103,8 @@ SEL=()
 if [ "$MODE" = all ]; then
   [ "${#MISSING[@]}" -eq 0 ] && { printf '\n%snothing missing.%s\n' "$G" "$X"; exit 0; }
   SEL=("${MISSING[@]}")
+elif [ "$MODE" = only ]; then
+  for i in "${!IDS[@]}"; do [[ "$ONLY" == *",${IDS[$i]},"* ]] && SEL+=("$i"); done
 else
   command -v fzf >/dev/null 2>&1 || brew install fzf >/dev/null
   if [ ! -t 0 ] || [ ! -t 1 ]; then
@@ -139,20 +146,34 @@ if [ "${#cfg[@]}" -gt 0 ]; then for i in "${cfg[@]}"; do
   printf '\n%sconfig: %s%s\n' "$B" "${IDS[$i]}" "$X"
   case "${IDS[$i]}" in
     shell)
-      command -v stow >/dev/null 2>&1 || brew install stow >/dev/null
-      for f in .zshrc .zprofile; do t="$HOME/$f"; [ -e "$t" ] && [ ! -L "$t" ] && mv "$t" "$t.pre-dotfiles.bak"; done
-      stow --dir="$DIR" --target="$HOME" --restow shell ;;
+      for f in .zprofile .zshrc; do t="$HOME/$f"
+        if [ -L "$t" ] && [ "$(readlink "$t")" = "$DIR/shell/$f" ]; then
+          rm "$t"; [ -f "$t.pre-dotfiles.bak" ] && mv "$t.pre-dotfiles.bak" "$t"
+          echo "  $t: replaced old symlink with your own file"; fi
+        touch "$t"
+        if grep -qsF "$MARK_START" "$t"; then echo "  $t: dotfiles block already present, left as is"
+        else printf '\n%s\n[ -f "%s" ] && source "%s"\n%s\n' "$MARK_START" "$DIR/shell/$f" "$DIR/shell/$f" "$MARK_END" >> "$t"
+             echo "  $t: appended dotfiles block, your existing lines are untouched"; fi
+      done ;;
     git)
-      GC="$HOME/.gitconfig"; [ -L "$GC" ] && rm -f "$GC"; touch "$GC"
+      GC="$HOME/.gitconfig"; [ -L "$GC" ] && GC="$(perl -MCwd -e 'print Cwd::realpath(shift)' "$GC")"; touch "$GC"
       grep -qsF "$DIR/git/.gitconfig" "$GC" || git config --file "$GC" --add include.path "$DIR/git/.gitconfig"
       [ -z "$(git config --get user.email 2>/dev/null || true)" ] && \
         echo "  set identity:  git config --global user.name '...'  &&  git config --global user.email '...'" || true
       command -v gh >/dev/null && ! gh auth status >/dev/null 2>&1 && \
         echo "  log in to github (browser, token goes in keychain):  gh auth login" || true ;;
     ghostty-theme) [ -x "$DIR/ghostty/install.sh" ] && "$DIR/ghostty/install.sh" ;;
-    claude)  mkdir -p "$HOME/.claude/commands"; cp "$DIR"/claude/commands/*.md "$HOME/.claude/commands/" 2>/dev/null || true ;;
-    skills)  for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do mkdir -p "$t"
-               for s in "$DIR"/agents/skills/*/; do rsync -a --delete --exclude __pycache__ "$s" "$t/$(basename "$s")/"; done; done ;;
+    skills)
+      for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do mkdir -p "$t"
+        for s in "$DIR"/agents/skills/*/; do n="$(basename "$s")"; d="$t/$n"
+          if [ -d "$d" ] && [ ! -f "$d/.dotfiles" ] && ! diff -rq -x __pycache__ "$s" "$d" >/dev/null 2>&1; then
+            echo "  skip $d: you already have a different skill with this name"; continue; fi
+          rsync -a --exclude __pycache__ "$s" "$d/"; touch "$d/.dotfiles"
+        done
+      done
+      for s in "$DIR"/agents/skills/*/; do n="$(basename "$s")"
+        [ -f "$HOME/.claude/commands/$n.md" ] && echo "  note: ~/.claude/commands/$n.md is an older slash command with the same name; remove it to use only the skill"
+      done; true ;;
     macos)   bash "$DIR/macos/defaults.sh" ;;
   esac
 done; fi

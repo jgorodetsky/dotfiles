@@ -10,7 +10,6 @@ brew "jq"        # JSON processor
 brew "ripgrep"   # fast code search (rg)
 brew "fzf"       # fuzzy finder
 brew "tree"      # directory tree
-brew "stow"      # symlink manager for dotfiles
 
 # languages
 brew "go"        # Go toolchain

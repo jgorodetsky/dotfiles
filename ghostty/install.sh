@@ -2,6 +2,7 @@
 # ghostty themes + gtheme installer.
 # Installs every theme in themes/ (ChessKing, cadillac-*), the ChessKing board, and the
 # gtheme picker, and points your Ghostty config at ChessKing. Safe to re-run (idempotent).
+# Never clobbers: a file that differs from the repo copy is kept as <file>.bak-<timestamp>.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,18 +17,29 @@ for c in "$HOME/Library/Application Support/com.mitchellh.ghostty/config" "$GHOS
 done
 [ -z "$CONFIG" ] && CONFIG="$GHOSTTY_DIR/config"
 
+STAMP="$(date +%Y%m%d%H%M%S)"
+place(){ # copy $1 to $2; keep a differing existing file as a timestamped .bak
+  if [ -e "$2" ] && ! cmp -s "$1" "$2"; then mv "$2" "$2.bak-$STAMP"; echo "  kept your $2 as $2.bak-$STAMP"; fi
+  [ -e "$2" ] || cp "$1" "$2"
+}
+
 echo "Installing into $GHOSTTY_DIR"
 mkdir -p "$THEMES_DIR" "$BG_DIR"
 
-cp "$DIR"/themes/*                   "$THEMES_DIR/"
-cp "$DIR/backgrounds/ChessKing.png"  "$BG_DIR/ChessKing.png"
-cp "$DIR/backgrounds/ChessKing.opts" "$BG_DIR/ChessKing.opts"
-cp "$DIR/gtheme"                     "$GHOSTTY_DIR/gtheme"
+for t in "$DIR"/themes/*; do place "$t" "$THEMES_DIR/${t##*/}"; done
+place "$DIR/backgrounds/ChessKing.png"  "$BG_DIR/ChessKing.png"
+place "$DIR/backgrounds/ChessKing.opts" "$BG_DIR/ChessKing.opts"
+place "$DIR/gtheme"                     "$GHOSTTY_DIR/gtheme"
 chmod +x "$GHOSTTY_DIR/gtheme"
 
 # make gtheme runnable as a bare command: symlink into ~/.local/bin (on PATH via .zprofile)
 mkdir -p "$HOME/.local/bin"
-ln -sf "$GHOSTTY_DIR/gtheme" "$HOME/.local/bin/gtheme"
+LINK="$HOME/.local/bin/gtheme"
+case "$(readlink "$LINK" 2>/dev/null || true)" in
+  "$GHOSTTY_DIR/gtheme"|"$DIR/gtheme") ;;
+  *) [ -e "$LINK" ] || [ -L "$LINK" ] && { mv "$LINK" "$LINK.bak-$STAMP"; echo "  kept your $LINK as $LINK.bak-$STAMP"; } ;;
+esac
+ln -sfn "$GHOSTTY_DIR/gtheme" "$LINK"
 
 MARK_START="# >>> ChessKing (managed) >>>"
 MARK_END="# <<< ChessKing (managed) <<<"
