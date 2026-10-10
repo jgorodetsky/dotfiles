@@ -1,0 +1,43 @@
+# the mine table: tools and keys you can't detect from .zshrc, plus notes for aliases/functions.
+# columns: name (extra names in parens match too) | type | replaces | what it does | try this
+# type tool/key rows always show. alias/function rows only add detail to ones that exist in
+# .zshrc / .zshrc.local (those are listed automatically), so a note for a deleted alias never shows.
+# edit with: mine --edit
+name	type	replaces	what it does	try this
+eza	tool	ls	colored file list, folders first, git status per file	ls; ll (details); la (+ hidden files)
+bat	tool	cat	shows files with code colors	cat file (colors only); bat file (+ line numbers)
+zoxide (z, zi)	tool	cd	remembers folders you visit, jump by part of the name (cd still works)	z dot; zi (pick from a list)
+ctrl-r	key	up-arrow history	fuzzy search everything you've ever typed	press ctrl-r, type kubectl
+ctrl-t	key	typing paths	pick a file, pastes its path into your command	type vim then press ctrl-t
+alt-c	key	cd + typing paths	pick any folder below here and go there	press esc then c
+rg (ripgrep)	tool	grep	fast text search inside files, skips .git and junk	rg password
+ff	function	hunting in finder	pick a file with a preview, enter opens it in vim	ff; ff readme
+fif	function	grep then open the file	search inside files as you type, enter opens at that line	fif awslogin
+fzf	tool		the search-as-you-type picker behind ctrl-r, ctrl-t, ff, fif, zi	ls | fzf
+starship	tool	default prompt	info line: folder, git branch, aws account, kube cluster (prod in red)	just open a terminal
+autosuggestions	tool		gray text finishing your command from history	type git, press right-arrow to accept
+syntax-highlighting	tool		command turns red if it doesn't exist, before you hit enter	type gti
+tldr	tool	man / --help	5-8 real examples for any public command (mine is for your own setup)	tldr tar
+mine	function		this table: your tools, keys, aliases and functions. type to filter when it's long	mine; mine aws; mine cd; mine --edit
+alias	function	alias (plain list)	with nothing after it, shows your aliases as a table; piped or with arguments it is the normal alias	alias; alias | grep git
+boxtable	tool		draws any tab-separated text as a boxed table that fits the screen; tall tables open searchable	printf 'a\tb\n1\t2\n' | boxtable
+awssetup	tool	hand-editing ~/.aws/config	one-time aws sso setup: a profile for every account + role	awssetup
+awslogin	function	export AWS_PROFILE=...	pick an aws profile for this shell, logs in only if expired	awslogin; awslogin dev-readonly
+awsme	alias		which aws account + role you're using right now	
+awscli	tool	aws web console	control aws from the terminal	aws s3 ls
+k	alias			k get pods
+kcur	alias		which kube cluster you're pointed at	
+kctx	function	kubectl config use-context	pick a kube cluster from a list; -u clears it so kubectl points nowhere	kctx; kctx -u
+helm	tool		app store for kubernetes	helm list
+terraform	tool	clicking in the cloud console	build cloud infrastructure from code files	terraform plan
+ccupdate	function	brew upgrade / claude update	update claude code however it was installed	ccupdate
+resetmain	alias		DESTRUCTIVE: reset local main to origin, throws away local work on main	
+pwdc	alias		copy the current folder path to the clipboard	
+p	alias			p script.py
+gh	tool	github website	github from the terminal	gh pr create
+ghh	tool		your git + github workflow tool	ghh --help
+jq	tool		read and filter json	awsme | jq .Account
+tree	tool		draw folders as a tree	tree -L 2
+ruff	tool		check and auto-format python code	ruff check .
+go	tool		the go language toolchain	go run .
+gtheme	alias		pick a ghostty color theme	

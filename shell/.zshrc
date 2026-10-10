@@ -139,21 +139,22 @@ alias() {
   fi
 }
 
-# mine - one table of the aliases and functions defined in your dotfiles, searchable when it's long.
+# mine - everything on your setup in one a-z table: tools, keys, aliases and functions. mine aws to filter.
+# aliases and functions are read live from .zshrc / .zshrc.local; tools and keys live in shell/mine.tsv.
 # a function's description is its own "# name - ..." comment line, so keep that line self-contained.
 mine() {
   local f k desc
-  { print -r -- $'name\ttype\twhat it does / runs'
-    for k in ${(ok)aliases}; do print -r -- "$k"$'\t'"alias"$'\t'"${aliases[$k]//$'\t'/ }"; done
+  [[ ${1:-} == (-e|--edit|-h|--help) ]] && { mine-table "$@"; return; }
+  { for k in ${(ok)aliases}; do
+      [[ $k == (run-help|which-command) ]] && continue   # zsh defaults, not yours
+      print -r -- "$k"$'\t'"alias"$'\t'"${aliases[$k]//$'\t'/ }"; done
     for f in ${(ko)functions}; do
       [[ $f == _* || ${functions_source[$f]} != *.zshrc(|.local) ]] && continue
       grep -q "^${f}() {" "${functions_source[$f]}" || continue   # skip ones created by eval (starship, zoxide)
       desc=$(sed -n "s/^# ${f} - //p" "${functions_source[$f]}" | head -1)
       print -r -- "$f"$'\t'"function"$'\t'"$desc"
     done
-  } | { (( $+commands[boxtable] )) && [[ -t 1 ]] && boxtable || tr '\t' ' '; }
-  command -v ghh >/dev/null && echo "(ghh: run 'ghh --help')"
-  echo "(the tools behind these: tldrme)"
+  } | mine-table "$@"
 }
 
 # starship prompt: folder, git, aws profile, kube context. skipped if another

@@ -77,17 +77,20 @@ outside the block is skipped. If the config already has an `sso-session`, it tel
 
 ## Shell helpers
 
-Three ways to look things up:
+Two ways to look things up:
 
-- `tldrme` - the tools this setup adds and what they replace (`ls` is eza, `cd` has zoxide...).
-  `tldrme bat eza` shows just those rows, `tldrme aws` every aws tool, `tldrme cd` whatever
-  replaced cd. Add a row with `tldrme --edit` (it's `shell/tldrme.tsv`).
+- `mine` - everything on your setup in one A-Z table: tools (eza, bat, zoxide...), keys (ctrl-r...),
+  and every alias and function, with what it replaces and an example. `mine aws` shows every aws
+  thing, `mine bat eza` just those, `mine cd` whatever replaced cd. Aliases and functions are read
+  live from `.zshrc` and `.zshrc.local`, so new ones show up on their own; tools and keys live in
+  `shell/mine.tsv` (`mine --edit`). Piped (`mine | grep aws`) it prints plain tab-separated rows.
 - `tldr <command>` - 5-8 real examples for any public command, e.g. `tldr tar`.
-- `mine` - every alias and function in your dotfiles, with its description. Plain `alias` shows
-  your aliases as a table too (piped, like `alias | grep git`, it's the normal plain list).
 
-`tldrme`, `mine` and `alias` all draw through `boxtable`, which turns any tab-separated text into a
-boxed table that fits the terminal: `printf 'name\tsize\nfoo\t12\n' | boxtable`.
+Plain `alias` shows your aliases as a table too (piped, like `alias | grep git`, it's the normal list).
+
+Both draw through `boxtable`, which turns any tab-separated text into a boxed table: rows always
+sorted A-Z by the first column, columns that are empty everywhere dropped, at most 110 characters
+wide (`BOXTABLE_MAX_WIDTH`), long text wrapped at spaces. `printf 'name\tsize\nfoo\t12\n' | boxtable`.
 
 A table taller than your screen opens searchable: type words to filter the rows (they can be in any
 column, all must match, `'word` for loose matching), Enter leaves the matching rows printed in your
@@ -119,8 +122,8 @@ context. Contexts with `prod` in the name turn red. Native Claude Code installs 
 | `shell/.zshrc` | completions, aliases, fzf/zoxide/eza/bat, aws + kube helpers, prompt, plugins |
 | `shell/starship.toml` | prompt layout |
 | `bin/awssetup` | AWS SSO profile generator (on PATH via `.zprofile`) |
-| `bin/tldrme`, `shell/tldrme.tsv` | your own cheat sheet and the table behind it |
-| `bin/boxtable` | draws tab-separated text as a boxed table (used by tldrme, mine, alias) |
+| `bin/mine-table`, `shell/mine.tsv` | the engine behind `mine`, and the tools/keys/notes it adds to your aliases and functions |
+| `bin/boxtable` | draws tab-separated text as a boxed table (used by mine and alias) |
 | `git/.gitconfig` | git behavior only, no identity (see below) |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |
