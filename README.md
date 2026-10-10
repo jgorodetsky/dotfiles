@@ -89,6 +89,11 @@ Three ways to look things up:
 `tldrme`, `mine` and `alias` all draw through `boxtable`, which turns any tab-separated text into a
 boxed table that fits the terminal: `printf 'name\tsize\nfoo\t12\n' | boxtable`.
 
+A table taller than your screen opens searchable: type words to filter the rows (they can be in any
+column, all must match, `'word` for loose matching), Enter leaves the matching rows printed in your
+terminal (Enter with nothing typed prints the whole table), Esc closes. Short tables just print,
+and piped output is always plain. `boxtable --plain` never opens the search.
+
 | Command | What |
 |---------|------|
 | `ctrl-r` / `ctrl-t` | fuzzy history search / file picker with a bat preview (fzf) |

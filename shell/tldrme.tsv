@@ -16,9 +16,9 @@ autosuggestions	-	gray text finishing your command from history	type git, press 
 syntax-highlighting	-	command turns red if it doesn't exist, before you hit enter	type gti
 tldr	man / --help	5-8 real examples for any public command	tldr tar
 tldrme	-	this table: what's on your setup and what it replaced	tldrme bat eza; tldrme --edit
-mine	-	every alias and function in your dotfiles, with descriptions	mine
+mine	-	every alias and function in your dotfiles, with descriptions (searchable when long)	mine, then type aws
 alias	alias (plain list)	with nothing after it, shows your aliases as a table; piped or with arguments it is the normal alias	alias; alias | grep git
-boxtable	-	draws any tab-separated text as a boxed table that fits the screen	printf 'a\tb\n1\t2\n' | boxtable
+boxtable	-	draws any tab-separated text as a boxed table that fits the screen; tall tables open searchable	printf 'a\tb\n1\t2\n' | boxtable
 awssetup	hand-editing ~/.aws/config	one-time aws sso setup: a profile for every account + role	awssetup
 awslogin	export AWS_PROFILE=...	pick an aws profile for this shell, logs in only if expired	awslogin; awslogin dev-readonly
 awsme	aws sts get-caller-identity	which aws account + role you're using right now	awsme

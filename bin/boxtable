@@ -1,70 +1,114 @@
 #!/usr/bin/env bash
 # boxtable - draw tab-separated text as a boxed table that fits the terminal.
 # first line is the header. long cells wrap inside their column, the first column is highlighted.
+# a table taller than the screen opens in a searchable view: type words to filter rows (any column, 'word = loose match),
+# enter leaves the rows you see printed in the terminal, esc closes. --plain always just prints.
 #   printf 'name\tsize\nfoo\t12\n' | boxtable
-#   some-command | awk -v OFS='\t' '{print $1, $3}' | boxtable
+#   some-command | awk -v OFS='\t' '{print $1, $3}' | boxtable --plain
 set -euo pipefail
 
-case "${1:-}" in -h|--help) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
+plain=0
+case "${1:-}" in
+  -h|--help) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  --plain) plain=1 ;;
+esac
 
-width="${COLUMNS:-$(tput cols 2>/dev/null || echo 120)}"
-color=0; [ -t 1 ] && color=1
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+cat > "$tmp/in"
+# size from the terminal itself when printing to one; COLUMNS (or 120) when piped
+height=9999; color=0
+if [ -t 1 ] && size="$(stty size </dev/tty 2>/dev/null)" && [ -n "$size" ]; then
+  height="${size% *}"; width="${size#* }"; color=1
+else width="${COLUMNS:-120}"; fi
 
-awk -F'\t' -v width="$width" -v color="$color" '
-function wrap(s, w, out,   n, i, t, k, line) {   # word-wrap s to width w -> out[1..k]
-  n = split(s, t, / /); k = 0; line = ""
-  for (i = 1; i <= n; i++) {
-    while (length(t[i]) > w) { if (line != "") { out[++k] = line; line = "" } out[++k] = substr(t[i], 1, w); t[i] = substr(t[i], w + 1) }
-    if (line == "") line = t[i]
-    else if (length(line) + 1 + length(t[i]) <= w) line = line " " t[i]
-    else { out[++k] = line; line = t[i] }
-  }
-  out[++k] = line
-  return k
-}
-function rule(l, m, r,   i, j, s) {          # a border line like ├────┼────┤
-  s = l
-  for (i = 1; i <= nc; i++) { for (j = 0; j < wid[i] + 2; j++) s = s "─"; s = s (i < nc ? m : r) }
-  print D s X
-}
-function row(r, style,   i, l, n, h, s, st, txt, lines) {
-  h = 0
-  for (i = 1; i <= nc; i++) { n = wrap(cell[r, i], wid[i], lines); cnt[i] = n; if (n > h) h = n
-    for (l = 1; l <= n; l++) part[i, l] = lines[l] }
-  for (l = 1; l <= h; l++) {
-    txt = D "│" X
-    for (i = 1; i <= nc; i++) {
-      s = (l <= cnt[i]) ? part[i, l] : ""
-      st = (i == 1 || r == 0) ? style : ""
-      txt = txt " " st s X sprintf("%*s", wid[i] - length(s), "") " " D "│" X
+# render <mode> <width> <tsv>: mode "table" prints the box; mode "items" writes the header block to
+# $tmp/hdr and one search item per row (row number, a tab, the drawn row) separated by \036
+render() {
+  awk -F'\t' -v mode="$1" -v width="$2" -v color="$color" -v hdr="$tmp/hdr" '
+  function wrap(s, w, out,   n, i, t, k, line) {   # word-wrap s to width w -> out[1..k]
+    n = split(s, t, / /); k = 0; line = ""
+    for (i = 1; i <= n; i++) {
+      while (length(t[i]) > w) { if (line != "") { out[++k] = line; line = "" } out[++k] = substr(t[i], 1, w); t[i] = substr(t[i], w + 1) }
+      if (line == "") line = t[i]
+      else if (length(line) + 1 + length(t[i]) <= w) line = line " " t[i]
+      else { out[++k] = line; line = t[i] }
     }
-    print txt
+    out[++k] = line
+    return k
   }
+  function rule(l, m, r,   i, j, s) {          # a border line like ├────┼────┤
+    s = l
+    for (i = 1; i <= nc; i++) { for (j = 0; j < wid[i] + 2; j++) s = s "─"; s = s (i < nc ? m : r) }
+    return D s X
+  }
+  function row(r, style,   i, l, n, h, s, st, txt, out, lines) {   # one table row, maybe several lines
+    h = 0; out = ""
+    for (i = 1; i <= nc; i++) { n = wrap(cell[r, i], wid[i], lines); cnt[i] = n; if (n > h) h = n
+      for (l = 1; l <= n; l++) part[i, l] = lines[l] }
+    for (l = 1; l <= h; l++) {
+      txt = D "│" X
+      for (i = 1; i <= nc; i++) {
+        s = (l <= cnt[i]) ? part[i, l] : ""
+        st = (i == 1 || r == 0) ? style : ""
+        txt = txt " " st s X sprintf("%*s", wid[i] - length(s), "") " " D "│" X
+      }
+      out = out (l > 1 ? "\n" : "") txt
+    }
+    return out
+  }
+  NF == 0 { next }
+  { if (nc == 0) nc = NF
+    r = rows++; for (i = 1; i <= nc; i++) { gsub(/\r/, "", $i); cell[r, i] = $i } }
+  END {
+    if (rows == 0) exit 0
+    B = color ? "\033[1m" : ""; C = color ? "\033[1;36m" : ""; D = color ? "\033[2m" : ""; X = color ? "\033[0m" : ""
+
+    # natural column widths. if too wide, short columns (16 or less) keep their size and the
+    # long ones shrink in proportion to their text; then shave the widest to fix rounding
+    for (r = 0; r < rows; r++) for (i = 1; i <= nc; i++) if (length(cell[r, i]) > wid[i]) wid[i] = length(cell[r, i])
+    avail = width - (3 * nc + 1)
+    sum = 0; fixed = 0; flex = 0
+    for (i = 1; i <= nc; i++) { sum += wid[i]; if (wid[i] <= 16) fixed += wid[i]; else flex += wid[i] }
+    if (sum > avail && flex > 0)
+      for (i = 1; i <= nc; i++) if (wid[i] > 16) { wid[i] = int(wid[i] * (avail - fixed) / flex); if (wid[i] < 8) wid[i] = 8 }
+    for (;;) {
+      sum = 0; big = 1
+      for (i = 1; i <= nc; i++) { sum += wid[i]; if (wid[i] > wid[big]) big = i }
+      if (sum <= avail || wid[big] <= 8) break
+      wid[big]--
+    }
+
+    if (mode == "items") {
+      print rule("┌", "┬", "┐") "\n" row(0, B) "\n" rule("├", "┼", "┤") > hdr
+      for (r = 1; r < rows; r++) printf "%d\t%s\n%s\036", r, row(r, C), rule("├", "┼", "┤")
+      exit 0
+    }
+    print rule("┌", "┬", "┐"); print row(0, B)
+    for (r = 1; r < rows; r++) { print rule("├", "┼", "┤"); print row(r, C) }
+    print rule("└", "┴", "┘")
+  }' "$3"
 }
-NF == 0 { next }
-{ if (NR == 1 || nc == 0) nc = NF
-  r = rows++; for (i = 1; i <= nc; i++) { gsub(/\r/, "", $i); cell[r, i] = $i } }
-END {
-  if (rows == 0) exit 0
-  B = color ? "\033[1m" : ""; C = color ? "\033[1;36m" : ""; D = color ? "\033[2m" : ""; X = color ? "\033[0m" : ""
 
-  # natural column widths. if too wide, short columns (16 or less) keep their size and the
-  # long ones shrink in proportion to their text; then shave the widest to fix rounding
-  for (r = 0; r < rows; r++) for (i = 1; i <= nc; i++) if (length(cell[r, i]) > wid[i]) wid[i] = length(cell[r, i])
-  avail = width - (3 * nc + 1)
-  sum = 0; fixed = 0; flex = 0
-  for (i = 1; i <= nc; i++) { sum += wid[i]; if (wid[i] <= 16) fixed += wid[i]; else flex += wid[i] }
-  if (sum > avail && flex > 0)
-    for (i = 1; i <= nc; i++) if (wid[i] > 16) { wid[i] = int(wid[i] * (avail - fixed) / flex); if (wid[i] < 8) wid[i] = 8 }
-  for (;;) {
-    sum = 0; big = 1
-    for (i = 1; i <= nc; i++) { sum += wid[i]; if (wid[i] > wid[big]) big = i }
-    if (sum <= avail || wid[big] <= 8) break
-    wid[big]--
-  }
+render table "$width" "$tmp/in" > "$tmp/out"
 
-  rule("┌", "┬", "┐")
-  row(0, B)
-  for (r = 1; r < rows; r++) { rule("├", "┼", "┤"); row(r, C) }
-  rule("└", "┴", "┘")
-}'
+# short enough to read at a glance, piped, or no fzf: just print it
+if [ "$plain" = 1 ] || [ ! -t 1 ] || ! command -v fzf >/dev/null || [ ! -r /dev/tty ] ||
+   [ "$(wc -l < "$tmp/out")" -lt "$height" ]; then
+  cat "$tmp/out"; exit 0
+fi
+
+# tall table: searchable view. the row numbers ride along hidden so enter can reprint those rows
+render items "$((width - 4))" "$tmp/in" | tr '\036' '\0' > "$tmp/items"
+hint=$'\033[2m'"type words to filter (any column, all must match; 'word for loose matching) · enter keeps the matching rows on screen · esc closes"$'\033[0m'
+# fzf only collects the query; the same matcher then runs non-interactively to pick the rows
+match=(--read0 --ansi --exact --delimiter=$'\t' --with-nth=2..)
+out="$(fzf "${match[@]}" --layout=reverse --height=100% --tiebreak=index --info=inline-right \
+    --prompt='search > ' --pointer='▌' --header="$hint"$'\n'"$(cat "$tmp/hdr")" \
+    --print-query --bind 'enter:accept-or-print-query' < "$tmp/items")" || [ $? = 1 ] || exit 0   # 1 = no match
+query="${out%%$'\n'*}"
+if [ -z "$query" ]; then picked="$(seq 1 "$(tr -cd '\0' < "$tmp/items" | wc -c)")"
+else picked="$(fzf "${match[@]}" --print0 --filter="$query" < "$tmp/items" | tr '\0' '\n' | grep -E '^[0-9]+	' | cut -f1)"; fi
+[ -n "$picked" ] || exit 0
+awk -F'\t' -v keep="$(printf '%s,' $picked)" 'BEGIN { n = split(keep, k, ","); for (i = 1; i <= n; i++) want[k[i]] = 1 }
+  NF == 0 { next } { if (r == 0 || (r in want)) print; r++ }' "$tmp/in" > "$tmp/picked"
+render table "$width" "$tmp/picked"
