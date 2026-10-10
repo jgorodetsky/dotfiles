@@ -1,4 +1,4 @@
-# the tldrmy table: one row per tool, tab-separated. edit with: tldrmy --edit
+# the tldrme table: one row per tool, tab-separated. edit with: tldrme --edit
 # columns: tool (extra names in parens are matched too) | what it replaces | what it does | try this
 tool	replaces	what it does	try this
 eza	ls	colored file list, folders first, git status per file	ls; ll (details); la (+ hidden files)
@@ -15,8 +15,10 @@ starship	default prompt	info line: folder, git branch, aws account, kube cluster
 autosuggestions	-	gray text finishing your command from history	type git, press right-arrow to accept
 syntax-highlighting	-	command turns red if it doesn't exist, before you hit enter	type gti
 tldr	man / --help	5-8 real examples for any public command	tldr tar
-tldrmy	-	this table: what's on your setup and what it replaced	tldrmy bat eza; tldrmy --edit
+tldrme	-	this table: what's on your setup and what it replaced	tldrme bat eza; tldrme --edit
 mine	-	every alias and function in your dotfiles, with descriptions	mine
+alias	alias (plain list)	with nothing after it, shows your aliases as a table; piped or with arguments it is the normal alias	alias; alias | grep git
+boxtable	-	draws any tab-separated text as a boxed table that fits the screen	printf 'a\tb\n1\t2\n' | boxtable
 awssetup	hand-editing ~/.aws/config	one-time aws sso setup: a profile for every account + role	awssetup
 awslogin	export AWS_PROFILE=...	pick an aws profile for this shell, logs in only if expired	awslogin; awslogin dev-readonly
 awsme	aws sts get-caller-identity	which aws account + role you're using right now	awsme

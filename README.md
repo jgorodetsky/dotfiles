@@ -79,11 +79,15 @@ outside the block is skipped. If the config already has an `sso-session`, it tel
 
 Three ways to look things up:
 
-- `tldrmy` - the tools this setup adds and what they replace (`ls` is eza, `cd` has zoxide...).
-  `tldrmy bat eza` shows just those rows, `tldrmy aws` every aws tool, `tldrmy cd` whatever
-  replaced cd. Add a row with `tldrmy --edit` (it's `shell/tldrmy.tsv`).
+- `tldrme` - the tools this setup adds and what they replace (`ls` is eza, `cd` has zoxide...).
+  `tldrme bat eza` shows just those rows, `tldrme aws` every aws tool, `tldrme cd` whatever
+  replaced cd. Add a row with `tldrme --edit` (it's `shell/tldrme.tsv`).
 - `tldr <command>` - 5-8 real examples for any public command, e.g. `tldr tar`.
-- `mine` - every alias and function in your dotfiles, with its description.
+- `mine` - every alias and function in your dotfiles, with its description. Plain `alias` shows
+  your aliases as a table too (piped, like `alias | grep git`, it's the normal plain list).
+
+`tldrme`, `mine` and `alias` all draw through `boxtable`, which turns any tab-separated text into a
+boxed table that fits the terminal: `printf 'name\tsize\nfoo\t12\n' | boxtable`.
 
 | Command | What |
 |---------|------|
@@ -110,7 +114,8 @@ context. Contexts with `prod` in the name turn red. Native Claude Code installs 
 | `shell/.zshrc` | completions, aliases, fzf/zoxide/eza/bat, aws + kube helpers, prompt, plugins |
 | `shell/starship.toml` | prompt layout |
 | `bin/awssetup` | AWS SSO profile generator (on PATH via `.zprofile`) |
-| `bin/tldrmy`, `shell/tldrmy.tsv` | your own cheat sheet and the table behind it |
+| `bin/tldrme`, `shell/tldrme.tsv` | your own cheat sheet and the table behind it |
+| `bin/boxtable` | draws tab-separated text as a boxed table (used by tldrme, mine, alias) |
 | `git/.gitconfig` | git behavior only, no identity (see below) |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |

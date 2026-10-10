@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# tldrme - tldr for your own setup: the tools these dotfiles add and what they replace.
+#   tldrme                the whole table
+#   tldrme bat eza tldr   just those rows (commas are fine). an exact tool name, else names starting
+#                         with it (aws -> every aws tool), or what it replaces (cd, ls, git, kubectl)
+#   tldrme --edit         open the table file to add or change a row
+set -euo pipefail
+
+DATA="$(cd "$(dirname "$0")/.." && pwd)/shell/tldrme.tsv"
+case "${1:-}" in
+  -h|--help) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -e|--edit) exec ${EDITOR:-vim} "$DATA" ;;
+esac
+
+awk -F'\t' -v args="$(printf '%s ' "$@" | tr ',' ' ')" '
+function words(s, out,   n, i, t, k) {   # tool names: split on spaces, commas, parens
+  n = split(tolower(s), t, /[ ,()]+/); k = 0
+  for (i = 1; i <= n; i++) if (t[i] != "") out[++k] = t[i]
+  return k
+}
+/^#/ || NF == 0 { next }
+!have_head { head = $0; have_head = 1; next }
+{ rows++; line[rows] = $0; name[rows] = $1; replaces[rows] = $2 }
+END {
+  nq = split(tolower(args), q, / +/); keep = 0
+  for (j = 1; j <= nq; j++) {
+    if (q[j] == "") continue
+    hit = 0; exact = 0                     # exact tool name wins; else names starting with it
+    for (r = 1; r <= rows; r++) { n = words(name[r], w); for (i = 1; i <= n; i++) if (w[i] == q[j]) exact = 1 }
+    for (r = 1; r <= rows; r++) {
+      ok = 0; n = words(name[r], w)
+      for (i = 1; i <= n && !ok; i++) ok = exact ? (w[i] == q[j]) : (index(w[i], q[j]) == 1)
+      if (!ok) { split(tolower(replaces[r]), rep, / /); ok = (rep[1] == q[j]) }   # what it replaces: cd, ls, git...
+      if (ok) { hit = 1; if (!(r in picked)) { picked[r] = 1; order[++keep] = r } }
+    }
+    if (!hit) printf "tldrme: nothing for \"%s\" on your setup. for the public docs try: tldr %s\n", q[j], q[j] > "/dev/stderr"
+  }
+  if (nq == 0 || args ~ /^ *$/) for (r = 1; r <= rows; r++) order[++keep] = r
+  if (keep == 0) exit 1
+  print head
+  for (k = 1; k <= keep; k++) { l = line[order[k]]; sub(/\t-\t/, "\t\t", l); print l }   # "-" = replaces nothing
+}' "$DATA" | "$(dirname "$0")/boxtable"

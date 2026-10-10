@@ -126,20 +126,33 @@ kctx() {
   kubectl config use-context "$ctx"
 }
 
+# alias - with no arguments on screen, list aliases as a table; anything else is the normal builtin
+alias() {
+  if (( $# == 0 )) && [[ -t 1 ]] && (( $+commands[boxtable] )); then
+    local k
+    { print -r -- $'alias\truns'
+      for k in ${(ok)aliases}; do print -r -- "$k"$'\t'"${aliases[$k]//$'\t'/ }"; done
+    } | boxtable
+  else
+    builtin alias "$@"
+  fi
+}
+
 # mine - list the aliases and the functions defined in .zshrc / .zshrc.local, with descriptions.
 # a function's description is its own "# name - ..." comment line, so keep that line self-contained.
 mine() {
-  echo "aliases:"
-  alias | sed 's/^/  /'
-  echo "functions:"
   local f desc
-  for f in ${(ko)functions}; do
-    [[ $f == _* || ${functions_source[$f]} != *.zshrc(|.local) ]] && continue
-    grep -q "^${f}() {" "${functions_source[$f]}" || continue   # skip ones created by eval (starship, zoxide)
-    desc=$(sed -n "s/^# ${f} - //p" "${functions_source[$f]}" | head -1)
-    printf '  %-10s %s\n' "$f" "$desc"
-  done
+  alias
+  { print -r -- $'function\twhat it does'
+    for f in ${(ko)functions}; do
+      [[ $f == _* || ${functions_source[$f]} != *.zshrc(|.local) ]] && continue
+      grep -q "^${f}() {" "${functions_source[$f]}" || continue   # skip ones created by eval (starship, zoxide)
+      desc=$(sed -n "s/^# ${f} - //p" "${functions_source[$f]}" | head -1)
+      print -r -- "$f"$'\t'"$desc"
+    done
+  } | { (( $+commands[boxtable] )) && [[ -t 1 ]] && boxtable || tr '\t' ' '; }
   command -v ghh >/dev/null && echo "(ghh: run 'ghh --help')"
+  echo "(the tools behind these: tldrme)"
 }
 
 # starship prompt: folder, git, aws profile, kube context. skipped if another
