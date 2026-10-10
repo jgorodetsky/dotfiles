@@ -1,0 +1,20 @@
+# starship prompt: folder, git, aws profile, kube context. docs: https://starship.rs/config
+# used only when you don't have your own ~/.config/starship.toml
+
+format = "$directory$git_branch$git_status$aws$kubernetes$line_break$character"
+
+[aws]
+format = '[$symbol($profile )(\($region\) )]($style)'
+symbol = "☁ "
+style = "bold yellow"
+
+[kubernetes]
+disabled = false
+format = '[$symbol$context( \($namespace\))]($style) '
+symbol = "⎈ "
+style = "bold blue"
+
+# any context with "prod" in the name turns red
+[[kubernetes.contexts]]
+context_pattern = ".*prod.*"
+style = "bold red"

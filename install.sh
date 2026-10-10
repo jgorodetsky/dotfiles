@@ -34,7 +34,7 @@ for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
 done
 
 # ---------- manifest: packages parsed from Brewfile + config features ----------
-IDS=(); CLASSES=(); DESCS=(); KINDS=(); TARGETS=()
+IDS=(); CLASSES=(); DESCS=(); KINDS=(); TARGETS=(); SPECS=()
 cls=misc
 while IFS= read -r line || [ -n "$line" ]; do
   if [[ "$line" =~ ^#[[:space:]]+([a-z][a-z-]*)[[:space:]]*$ ]]; then
@@ -43,15 +43,28 @@ while IFS= read -r line || [ -n "$line" ]; do
     k="${BASH_REMATCH[1]}"; full="${BASH_REMATCH[2]}"; dsc="${BASH_REMATCH[4]:-}"
     IDS+=("${full##*/}"); CLASSES+=("$cls"); DESCS+=("${dsc:-${full##*/}}")
     [ "$k" = cask ] && KINDS+=(cask) || KINDS+=(formula); TARGETS+=("$full")
+    spec="${line%%#*}"; SPECS+=("${spec%"${spec##*[![:space:]]}"}")   # the Brewfile line minus its comment
   fi
 done < "$DIR/Brewfile"
 
-add_cfg(){ IDS+=("$1"); CLASSES+=(config); DESCS+=("$2"); KINDS+=(config); TARGETS+=("$1"); }
+add_cfg(){ IDS+=("$1"); CLASSES+=(config); DESCS+=("$2"); KINDS+=(config); TARGETS+=("$1"); SPECS+=(""); }
 add_cfg shell   "append a source line to ~/.zprofile + ~/.zshrc"
 add_cfg git     "include repo git config in ~/.gitconfig"
 add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
 add_cfg skills  "agent skills -> ~/.agents/skills + ~/.claude/skills"
 add_cfg macos   "key repeat, file extensions, screenshots"
+add_cfg claude  "claude code, native install (auto-updates itself)"
+add_cfg aws     "aws sso: one login, a profile for every account you can reach (awssetup)"
+
+# homebrew 6+ refuses third-party formulae until they're trusted. trust every Brewfile
+# entry marked trusted: true on every run, so taps like hashicorp/tap never need a manual step.
+if [ "$MODE" != check ] && brew trust --help >/dev/null 2>&1; then
+  while IFS= read -r line; do
+    [[ "$line" =~ ^(brew|cask|tap)[[:space:]]+\"([^\"]+)\".*trusted:[[:space:]]*true ]] || continue
+    case "${BASH_REMATCH[1]}" in brew) t=--formula ;; cask) t=--cask ;; tap) t=--tap ;; esac
+    brew trust "$t" "${BASH_REMATCH[2]}" >/dev/null 2>&1 || printf '%swarning: could not trust %s%s\n' "$Y" "${BASH_REMATCH[2]}" "$X"
+  done < "$DIR/Brewfile"
+fi
 
 # ---------- detection ----------
 FORMULAE="$(brew list --formula -1 2>/dev/null || true)"
@@ -81,6 +94,11 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
                    diff -rq -x __pycache__ -x .dotfiles "$s" "$t/$(basename "$s")" >/dev/null 2>&1 || return 1; done; done
                  WHERE="~/.agents/skills + ~/.claude/skills ($(ls "$DIR/agents/skills" | wc -l | tr -d ' ') skills)" ;;
         macos)   [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] && WHERE="KeyRepeat=2 (applied)" || return 1 ;;
+        claude)  p="$(command -v claude 2>/dev/null)" || return 1
+                 case "$p" in "$(brew --prefix)"/*) WHERE="$p (homebrew; updated by brew via CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE)" ;;
+                              *) WHERE="$p (native, auto-updates)" ;; esac ;;
+        aws)     grep -qs '^\[sso-session ' "${AWS_CONFIG_FILE:-$HOME/.aws/config}" || return 1
+                 WHERE="${AWS_CONFIG_FILE:-~/.aws/config} ($(grep -c '^\[profile ' "${AWS_CONFIG_FILE:-$HOME/.aws/config}") profiles)" ;;
       esac ;;
   esac
   return 0
@@ -135,9 +153,10 @@ for i in "${SEL[@]}"; do [ "${KINDS[$i]}" = config ] && cfg+=("$i") || pkg+=("$i
 
 if [ "${#pkg[@]}" -gt 0 ]; then
   tmp="$(mktemp)"; grep -E '^tap ' "$DIR/Brewfile" >> "$tmp" || true
-  for i in "${pkg[@]}"; do
-    [ "${KINDS[$i]}" = cask ] && printf 'cask "%s", args: { adopt: true }\n' "${TARGETS[$i]}" >> "$tmp" \
-                              || printf 'brew "%s"\n' "${TARGETS[$i]}" >> "$tmp"
+  for i in "${pkg[@]}"; do   # copy the Brewfile line as-is so options like trusted: true survive
+    if [ "${KINDS[$i]}" = cask ] && [[ "${SPECS[$i]}" != *args:* ]]; then
+      printf '%s, args: { adopt: true }\n' "${SPECS[$i]}" >> "$tmp"
+    else printf '%s\n' "${SPECS[$i]}" >> "$tmp"; fi
   done
   printf '\n%sinstalling packages...%s\n' "$B" "$X"; brew bundle --file="$tmp"; rm -f "$tmp"
 fi
@@ -175,6 +194,12 @@ if [ "${#cfg[@]}" -gt 0 ]; then for i in "${cfg[@]}"; do
         [ -f "$HOME/.claude/commands/$n.md" ] && echo "  note: ~/.claude/commands/$n.md is an older slash command with the same name; remove it to use only the skill"
       done; true ;;
     macos)   bash "$DIR/macos/defaults.sh" ;;
+    claude)
+      if command -v claude >/dev/null; then echo "  already installed: $(command -v claude), leaving it as is"
+      else curl -fsSL https://claude.ai/install.sh | bash; fi ;;
+    aws)
+      if [ -t 0 ] && [ -t 1 ]; then "$DIR/bin/awssetup" || echo "  awssetup didn't finish; run it again any time: awssetup"
+      else echo "  needs a terminal (it asks questions and opens a browser). run later: awssetup"; fi ;;
   esac
 done; fi
 

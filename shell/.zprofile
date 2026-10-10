@@ -10,3 +10,6 @@ done
 
 # user-local bins (uv, pipx, native installers)
 export PATH="$HOME/.local/bin:$PATH"
+
+# this repo's scripts (awssetup)
+path=("${${(%):-%x}:A:h:h}/bin" $path)

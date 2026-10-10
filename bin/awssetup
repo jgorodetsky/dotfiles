@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# awssetup - turn one aws sso start url into a profile for every account + role you can reach.
+# one browser login covers all of them; switch between them with awslogin.
+#
+# it writes only inside a marked block in ~/.aws/config. anything else in that file
+# (profiles from your company's own tooling, hand-written ones) is left alone, and a
+# profile name that already exists outside the block is skipped. re-run any time to
+# pick up new accounts; your previous answers become the defaults.
+#
+#   awssetup          interactive setup / refresh
+#   awssetup --help   this text
+set -euo pipefail
+
+CFG="${AWS_CONFIG_FILE:-$HOME/.aws/config}"
+START="# >>> awssetup >>>"; END="# <<< awssetup <<<"
+
+if [ -t 1 ]; then B=$'\033[1m'; D=$'\033[2m'; G=$'\033[32m'; Y=$'\033[33m'; X=$'\033[0m'
+else B= D= G= Y= X=; fi
+
+case "${1:-}" in
+  -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+  "") ;;
+  *) echo "usage: awssetup [--help]" >&2; exit 2 ;;
+esac
+
+for c in aws jq; do
+  command -v "$c" >/dev/null || { echo "awssetup needs $c: brew install ${c/aws/awscli}" >&2; exit 1; }
+done
+[ -t 0 ] || { echo "awssetup is interactive (it asks questions and opens a browser). run it in a terminal." >&2; exit 1; }
+
+# the config file minus our block
+outside() { [ -f "$CFG" ] && awk -v s="$START" -v e="$END" '$0==s{skip=1;next} $0==e{skip=0;next} !skip' "$CFG" || true; }
+# our block only
+inside() { [ -f "$CFG" ] && awk -v s="$START" -v e="$END" '$0==s{on=1;next} $0==e{on=0} on' "$CFG" || true; }
+# value of "key = value" inside our block
+saved() { inside | sed -n "s/^[#[:space:]]*$1 *= *//p" | head -1; }
+
+ask() { # ask "question" default -> echoes answer (default on empty)
+  local a; read -r -p "$1${2:+ ${D}[$2]${X}}: " a </dev/tty; echo "${a:-$2}"
+}
+
+# accept anything copied from the browser and reduce it to the start url
+normalize() {
+  local u
+  u="$(printf '%s' "$1" | tr -d '[:space:]')"
+  case "$u" in http://*|https://*) ;; *.*) u="https://$u" ;; "") echo ""; return ;; *) u="https://$u.awsapps.com/start" ;; esac
+  u="${u%%#*}"; u="${u%%\?*}"
+  if [[ "$u" =~ ^(https://[^/]+\.awsapps\.com) ]]; then echo "${BASH_REMATCH[1]}/start"
+  elif [[ "$u" =~ ^(https://[^/]+\.portal\.[a-z0-9-]+\.app\.aws) ]]; then echo "${BASH_REMATCH[1]}"
+  else echo "${u%/}"; fi
+}
+
+# sso region is baked into the newer portal urls; for the rest, see where the start page redirects
+guess_region() {
+  local hit
+  if [[ "$1" =~ \.portal\.([a-z0-9-]+)\.app\.aws ]]; then echo "${BASH_REMATCH[1]}"; return; fi
+  hit="$(curl -sIL --max-time 5 "$1" 2>/dev/null | tr -d '\r' | grep -i '^location:' || true)"
+  [[ "$hit" =~ \.portal\.([a-z0-9-]+)\.app\.aws ]] && { echo "${BASH_REMATCH[1]}"; return; }
+  [[ "$hit" =~ portal\.sso\.([a-z0-9-]+)\.amazonaws\.com ]] && { echo "${BASH_REMATCH[1]}"; return; }
+  echo ""
+}
+
+slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'; }
+
+# ---- what's already there ----
+others="$(outside | sed -n 's/^\[sso-session \(.*\)\]$/\1/p' | tr '\n' ' ')"
+taken="$(outside | sed -n -e 's/^\[profile \(.*\)\]$/\1/p' -e 's/^\[\(default\)\]$/\1/p')"
+had_block=0; inside | grep -q . && had_block=1
+
+printf '\n%sawssetup%s  %s%s%s\n\n' "$B" "$X" "$D" "$CFG" "$X"
+if [ -n "$others" ] && [ "$had_block" = 0 ]; then
+  echo "${Y}this config already has sso session(s): ${others}${X}"
+  echo "that usually means your company's tooling set it up. awslogin already works with those"
+  echo "profiles, so you probably don't need this."
+  [ "$(ask "add profiles from another sso portal anyway? (y/N)" n)" = y ] || exit 0
+fi
+
+# ---- start url ----
+cat <<EOF
+${B}step 1: your aws start url${X} (aws calls it the "aws access portal url")
+
+  easiest: sign in to aws the way you normally do (okta / google / entra tile, a bookmark,
+  a link from onboarding docs). on the page that lists your aws accounts, copy the whole
+  address bar and paste it here. extra bits after the url get trimmed.
+
+  it looks like one of:
+    https://d-1234567890.awsapps.com/start
+    https://yourcompany.awsapps.com/start
+    https://ssoins-1234567890abcdef.portal.us-east-1.app.aws
+
+  can't find it? check sso_start_url in ~/.aws/config on another machine, the
+  "invitation to join aws iam identity center" email, or ask your platform / it team.
+  aws admins: iam identity center console > dashboard > "aws access portal url".
+
+EOF
+url=""
+while [ -z "$url" ]; do
+  url="$(normalize "$(ask "paste start url (blank to quit)" "$(saved sso_start_url)")")"
+  [ -z "$url" ] && { echo "nothing entered, nothing changed."; exit 0; }
+  echo "  ${D}using: $url${X}"
+done
+
+# ---- regions ----
+echo
+echo "${B}step 2: regions${X}"
+echo "  the sso region is where your company's identity center lives, not where you run things."
+echo "  if you don't know it, us-east-1 is the most common; a wrong guess just fails the login."
+def_sso="$(saved sso_region)"; [ -z "$def_sso" ] && def_sso="$(guess_region "$url")"
+sso_region="$(ask "sso region" "${def_sso:-us-east-1}")"
+def_region="$(saved region)"
+region="$(ask "default region for your profiles" "${def_region:-$sso_region}")"
+
+# ---- session name (must not clash with a session outside our block) ----
+session="$(saved sso_session)"; session="${session:-sso}"
+case " $others " in *" $session "*) session=awssetup ;; esac
+
+# ---- login with a throwaway config so a failed run never touches the real one ----
+tmpcfg="$(mktemp)"; trap 'rm -f "$tmpcfg"' EXIT
+cat > "$tmpcfg" <<EOF
+[sso-session $session]
+sso_start_url = $url
+sso_region = $sso_region
+sso_registration_scopes = sso:account:access
+EOF
+echo
+echo "${B}step 3: sign in${X} (a browser window opens; approve it there)"
+AWS_CONFIG_FILE="$tmpcfg" aws sso login --sso-session "$session"
+
+cache="$HOME/.aws/sso/cache/$(printf '%s' "$session" | shasum -a 1 | cut -d' ' -f1).json"
+token="$(jq -r '.accessToken // empty' "$cache" 2>/dev/null || true)"
+if [ -z "$token" ]; then  # fall back to the newest cached token for this start url
+  for f in $(ls -t "$HOME/.aws/sso/cache/"*.json 2>/dev/null); do
+    token="$(jq -r --arg u "$url" 'select(.startUrl==$u) | .accessToken // empty' "$f" 2>/dev/null || true)"
+    [ -n "$token" ] && break
+  done
+fi
+[ -n "$token" ] || { echo "login finished but no token was found in $cache" >&2; exit 1; }
+
+# ---- discover accounts + roles ----
+echo
+echo "${B}step 4: finding your accounts${X}"
+accounts="$(aws sso list-accounts --access-token "$token" --region "$sso_region" --output json </dev/null |
+  jq -r '.accountList | sort_by(.accountName)[] | [.accountId, .accountName] | @tsv')"
+[ -n "$accounts" ] || { echo "you signed in, but no aws accounts are assigned to you." >&2; exit 1; }
+
+profiles=""; body=""; skipped=""; n=0
+while IFS=$'\t' read -r id name; do
+  printf '  %s %s(%s)%s\n' "$name" "$D" "$id" "$X"
+  roles="$(aws sso list-account-roles --access-token "$token" --account-id "$id" --region "$sso_region" --output json </dev/null |
+    jq -r '.roleList[].roleName' | sort)"
+  for role in $roles; do
+    p="$(slug "$name-$role")"
+    printf '%s\n' "$profiles" | grep -qx "$p" && p="$p-${id: -4}"   # two accounts with the same name
+    if printf '%s\n' "$taken" | grep -qx "$p"; then skipped="$skipped $p"; continue; fi
+    profiles="$profiles$p"$'\n'; n=$((n+1))
+    body="$body
+[profile $p]
+sso_session = $session
+sso_account_id = $id
+sso_role_name = $role
+region = $region
+output = json
+"
+  done
+done <<< "$accounts"
+
+# ---- optional default profile for plain `aws` calls ----
+default=""
+if ! printf '%s\n' "$taken" | grep -qx default && command -v fzf >/dev/null; then
+  echo
+  echo "${B}step 5 (optional): default profile${X} - used by plain \`aws\` commands with no profile set."
+  echo "  pick something low-risk (dev / read-only). esc to skip."
+  default="$(printf '%s' "$profiles" | fzf --height=15 --prompt="default profile: " --query="$(saved default)" || true)"
+fi
+if [ -n "$default" ]; then
+  body="$body
+[default]
+$(printf '%s\n' "$body" | awk -v p="[profile $default]" '$0==p{on=1;next} on&&/^\[/{exit} on&&NF' )
+"
+fi
+
+# ---- write: everything outside our block stays as it was ----
+mkdir -p "$(dirname "$CFG")"
+[ -f "$CFG" ] && cp -p "$CFG" "$CFG.bak-$(date +%Y%m%d%H%M%S)"
+new="$(mktemp)"
+{
+  outside | awk '{ lines[NR]=$0 } NF{ last=NR } END{ for(i=1;i<=last;i++) print lines[i] }'
+  [ -n "$(outside | tr -d '[:space:]')" ] && echo
+  echo "$START"
+  echo "# generated by awssetup (dotfiles). re-run awssetup to refresh; edits inside this block get replaced."
+  echo "# region = $region"
+  [ -n "$default" ] && echo "# default = $default"
+  echo
+  echo "[sso-session $session]"
+  echo "sso_start_url = $url"
+  echo "sso_region = $sso_region"
+  echo "sso_registration_scopes = sso:account:access"
+  printf '%s' "$body"
+  echo "$END"
+} > "$new"
+cat "$new" > "$CFG"; rm -f "$new"   # rewrite in place: keeps the file's permissions and any symlink
+
+echo
+echo "${G}✓ wrote $n profiles to $CFG${X}${default:+  (default: $default)}"
+if [ -n "$skipped" ]; then echo "  skipped (name already used outside the awssetup block):$skipped"; fi
+echo "  next: ${B}awslogin${X} to pick one for this shell, ${B}awsme${X} to check who you are."
