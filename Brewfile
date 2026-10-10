@@ -14,6 +14,7 @@ brew "tree"      # directory tree
 brew "eza"       # ls with colors + git status
 brew "bat"       # cat with syntax highlighting
 brew "zoxide"    # smarter cd (z / zi)
+brew "tlrc"      # tldr: short real-world examples for any command
 
 # prompt
 brew "starship"                 # prompt: git, aws profile, kube context
