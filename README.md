@@ -15,7 +15,7 @@ cd ~/dotfiles
 ```
 
 - `./install.sh` - health check, then fuzzy-pick what to install (ALL / by class / by feature)
-- `./install.sh --all` - install everything missing, no prompt
+- `./install.sh --all` - install everything missing, no prompt (the `MISSING` row in the picker does the same)
 - `./install.sh --check` - health check only, installs nothing
 - `./install.sh --only shell,skills` - (re)apply just those features
 
@@ -29,7 +29,7 @@ Safe to re-run and safe to `git pull` over an existing setup.
 | `git` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. |
 | `ghostty-theme` | Appends a marked block to your Ghostty config. If you already have a different theme file or `gtheme` with the same name, yours is kept as `<file>.bak-<timestamp>`. |
 | `skills` | Adds skill folders to `~/.agents/skills` and `~/.claude/skills`. If you already have a different skill with the same name, it's skipped. |
-| `macos` | Changes four settings (key repeat, file extensions, screenshot folder). The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
+| `macos` | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
 | `aws` | Runs `awssetup`, which writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
 | packages | `brew bundle` only adds. Nothing is uninstalled. |

@@ -52,7 +52,7 @@ add_cfg shell   "append a source line to ~/.zprofile + ~/.zshrc"
 add_cfg git     "include repo git config in ~/.gitconfig"
 add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
 add_cfg skills  "agent skills -> ~/.agents/skills + ~/.claude/skills"
-add_cfg macos   "key repeat, file extensions, screenshots"
+add_cfg macos   "key repeat, file extensions, screenshots, cmd+1 apps, ctrl+opt+arrow tiling"
 add_cfg claude  "claude code, native install (auto-updates itself)"
 add_cfg aws     "aws sso: one login, a profile for every account you can reach (awssetup)"
 
@@ -93,7 +93,10 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
         skills)  for s in "$DIR"/agents/skills/*/; do for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
                    diff -rq -x __pycache__ -x .dotfiles "$s" "$t/$(basename "$s")" >/dev/null 2>&1 || return 1; done; done
                  WHERE="~/.agents/skills + ~/.claude/skills ($(ls "$DIR/agents/skills" | wc -l | tr -d ' ') skills)" ;;
-        macos)   [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] && WHERE="KeyRepeat=2 (applied)" || return 1 ;;
+        macos)   [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] || return 1
+                 [ "$(defaults export com.apple.symbolichotkeys - 2>/dev/null | plutil -extract AppleSymbolicHotKeys.160.value.parameters json -o - - 2>/dev/null)" = "[49,18,1048576]" ] || return 1
+                 [ "$(defaults export com.apple.symbolichotkeys - 2>/dev/null | plutil -extract AppleSymbolicHotKeys.240.value.parameters json -o - - 2>/dev/null)" = "[65535,123,9175040]" ] || return 1
+                 WHERE="KeyRepeat=2, cmd+1 apps, ctrl+opt tiling (applied)" ;;
         claude)  p="$(command -v claude 2>/dev/null)" || return 1
                  case "$p" in "$(brew --prefix)"/*) WHERE="$p (homebrew; updated by brew via CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE)" ;;
                               *) WHERE="$p (native, auto-updates)" ;; esac ;;
@@ -127,7 +130,8 @@ else
   command -v fzf >/dev/null 2>&1 || brew install fzf >/dev/null
   if [ ! -t 0 ] || [ ! -t 1 ]; then
     printf '\nnot a terminal - re-run with %s--all%s to install everything missing.\n' "$B" "$X"; exit 0; fi
-  chosen="$( { printf 'ALL\t(re)install everything\n'
+  chosen="$( { [ "${#MISSING[@]}" -gt 0 ] && printf 'MISSING\tinstall only what is missing, skip the rest (same as --all)\n'
+      printf 'ALL\t(re)install everything, including what is already installed\n'
       for c in $(for i in "${!IDS[@]}"; do echo "${CLASSES[$i]}"; done | sort -u); do
         printf 'class:%s\t- whole %s class\n' "$c" "$c"; done
       for i in "${!IDS[@]}"; do
@@ -138,11 +142,11 @@ else
         --header='pick features (installed ones re-apply/update)   Tab=mark  Enter=go  Esc=cancel' \
       | cut -f1 )"
   [ -z "$chosen" ] && { echo "nothing selected."; exit 0; }
-  wa=0; wc=" "; wi=" "
+  wa=0; wm=0; wc=" "; wi=" "
   while IFS= read -r t; do case "$t" in
-    ALL) wa=1 ;; class:*) wc="$wc${t#class:} " ;; *) wi="$wi$t " ;; esac; done <<< "$chosen"
+    ALL) wa=1 ;; MISSING) wm=1 ;; class:*) wc="$wc${t#class:} " ;; *) wi="$wi$t " ;; esac; done <<< "$chosen"
   for i in "${!IDS[@]}"; do
-    if [ "$wa" = 1 ] || [[ "$wc" == *" ${CLASSES[$i]} "* ]] || [[ "$wi" == *" ${IDS[$i]} "* ]]; then SEL+=("$i"); fi
+    if [ "$wa" = 1 ] || { [ "$wm" = 1 ] && [ "${STATUS[$i]}" != ok ]; } || [[ "$wc" == *" ${CLASSES[$i]} "* ]] || [[ "$wi" == *" ${IDS[$i]} "* ]]; then SEL+=("$i"); fi
   done
 fi
 [ "${#SEL[@]}" -eq 0 ] && { echo "nothing to install."; exit 0; }
