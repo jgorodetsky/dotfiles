@@ -25,7 +25,7 @@ awsme	aws sts get-caller-identity	which aws account + role you're using right no
 awscli	aws web console	control aws from the terminal	aws s3 ls
 k	kubectl	short for kubectl	k get pods
 kcur	kubectl config current-context	which kube cluster you're pointed at	kcur
-kctx	kubectl config use-context	pick a kube cluster from a list	kctx
+kctx	kubectl config use-context	pick a kube cluster from a list; -u clears it so kubectl points nowhere	kctx; kctx -u
 helm	-	app store for kubernetes	helm list
 terraform	clicking in the cloud console	build cloud infrastructure from code files	terraform plan
 ccupdate	brew upgrade / claude update	update claude code however it was installed	ccupdate

@@ -102,7 +102,7 @@ and piped output is always plain. `boxtable --plain` never opens the search.
 | `z <dir>` / `zi` | jump to a frequent folder / pick one with fzf and a tree preview (zoxide) |
 | `alt-c` (or `esc` then `c`) | fuzzy-cd into any folder below here, with a tree preview |
 | `ls` `ll` `la` / `cat` | eza (git status per file) / bat, plain ls/cat if they aren't installed |
-| `k` `kcur` `kctx` | kubectl, current context, fzf-pick a context |
+| `k` `kcur` `kctx` | kubectl, current context, fzf-pick a context (`kctx -u` clears it) |
 | `ccupdate` | update Claude Code now, however it was installed |
 
 The prompt (starship) shows the folder, git branch and status, AWS profile and region, and kube

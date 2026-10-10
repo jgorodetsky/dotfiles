@@ -119,8 +119,9 @@ alias awsme='aws sts get-caller-identity'
 alias k='kubectl'
 alias kcur='kubectl config current-context'
 
-# kctx - fzf-pick the kube context
+# kctx - fzf-pick the kube context; kctx -u clears it (kubectl then points nowhere)
 kctx() {
+  if [[ ${1:-} == (-u|--unset) ]]; then kubectl config unset current-context; return; fi
   local ctx
   ctx=$(kubectl config get-contexts -o name | fzf --height=10 --prompt="kube context: ") || return 1
   kubectl config use-context "$ctx"
