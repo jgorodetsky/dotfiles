@@ -1,6 +1,6 @@
 # dotfiles
 
-My macOS setup: shell, git, Homebrew packages, Ghostty terminal themes, and AI agent skills
+My macOS setup: shell, git, Homebrew packages, Ghostty terminal themes and tabs, Neovim, and AI agent skills
 that work in Claude Code, Codex, Cursor, Gemini CLI, OpenCode and GitHub Copilot.
 
 `./install.sh` runs a health check, shows what's already installed (and where), and lets you
@@ -25,9 +25,11 @@ Safe to re-run and safe to `git pull` over an existing setup.
 
 | Feature | What it does to your machine |
 |---------|------------------------------|
-| `shell` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files. Your own lines stay above it, and re-running never adds it twice. Older installs that symlinked these files get your original file back first. |
+| `shell` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files. Your own lines stay above it, and re-running never adds it twice. Re-running from another checkout (a worktree, say) points the block at that checkout, with a `.bak-<timestamp>` of the file first. Older installs that symlinked these files get your original file back first. |
 | `git` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. |
 | `ghostty-theme` | Appends a marked block to your Ghostty config. If you already have a different theme file or `gtheme` with the same name, yours is kept as `<file>.bak-<timestamp>`. |
+| `ghostty-tabs` | Appends a marked block to your Ghostty config that loads `ghostty/tabs.conf`. Same re-pointing rule as `shell`. |
+| `nvim` | Links `~/.config/nvim` to `nvim/`. An existing `~/.config/nvim` of your own is kept as `~/.config/nvim.bak-<timestamp>`. |
 | `skills` | Adds skill folders to `~/.agents/skills` and `~/.claude/skills`. If you already have a different skill with the same name, it's skipped. |
 | `macos` | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
@@ -100,17 +102,75 @@ and piped output is always plain. `boxtable --plain` never opens the search.
 | Command | What |
 |---------|------|
 | `ctrl-r` / `ctrl-t` | fuzzy history search / file picker with a bat preview (fzf) |
-| `ff` | fuzzy-pick a file with a preview, enter opens it in `$EDITOR` (vim by default) |
+| `ff` | fuzzy-pick a file with a preview, enter opens it in `$EDITOR` (nvim when installed, else vim) |
 | `fif <text>` | live search inside files as you type, enter opens the match at that line |
 | `z <dir>` / `zi` | jump to a frequent folder / pick one with fzf and a tree preview (zoxide) |
 | `alt-c` (or `esc` then `c`) | fuzzy-cd into any folder below here, with a tree preview |
 | `ls` `ll` `la` / `cat` | eza (git status per file) / bat, plain ls/cat if they aren't installed |
 | `k` `kcur` `kctx` | kubectl, current context, fzf-pick a context (`kctx -u` clears it) |
 | `ccupdate` | update Claude Code now, however it was installed |
+| `tn <name>` | name this Ghostty tab; it keeps showing what runs in it (`api · nvim`). `tn` alone goes back to automatic |
+| `nv <file>` | Neovim with the LazyVim setup (see [Neovim](#neovim)) |
+| `trials` | the list of tools being tried (`trials.tsv`) as an editable table in Neovim. `trials --plain` prints it |
 
 The prompt (starship) shows the folder, git branch and status, AWS profile and region, and kube
 context. Contexts with `prod` in the name turn red. Native Claude Code installs auto-update on their own;
 `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE=1` makes Homebrew installs do the same.
+
+## Neovim
+
+`nv file` (short for `nvim`) opens [LazyVim](https://www.lazyvim.org), a ready-made setup: file search, a file tree,
+code checks for Go, Python, Bash, Terraform, YAML, Docker, JSON, Markdown and Helm, and lazygit.
+It's also `$EDITOR`, so `ff`, `fif` and `git commit` open it.
+
+- New to vim: `:Tutor` (30-minute lesson), `space` then `C` (cheat sheet, `nvim/cheat.md`), and
+  press `space` and wait to see what every key does.
+- Colors come from your active Ghostty theme (`:colorscheme ghostty`, built in `nvim/lua/dotfiles/ghostty.lua`),
+  so switching themes with `gtheme` recolors Neovim too. `space` `u` `C` picks another theme with a live
+  preview; `:Transparent` toggles the see-through background.
+- `.csv` and `.tsv` files open as a table: aligned columns, header pinned, tab / shift+tab between
+  columns, `cif` to change a cell.
+- `cmd+s` or `ctrl+s` saves. The mouse and the Mac clipboard work.
+
+The first start installs plugins (pinned in `nvim/lazy-lock.json`) and language tools, about a minute.
+Your additions go in `nvim/lua/plugins/` and `nvim/lua/config/`; LazyVim's own files stay untouched.
+
+## Git diffs
+
+Every diff you read on screen is drawn by [delta](https://dandavison.github.io/delta/): syntax colors,
+line numbers, `n` / `N` to jump between files. Nothing to type, it sits under the aliases and under
+lazygit. Output piped to a script or an agent stays a plain patch, and without delta installed git
+falls back to plain `less`. Set in `git/.gitconfig`.
+
+| Alias | Runs |
+|-------|------|
+| `gd` / `gds` | `git diff` (not yet added) / `git diff --staged` (what the next commit contains) |
+| `gdh` / `gdw` | `git diff HEAD` (everything since the last commit) / `git diff --word-diff` |
+| `gdm` | what this branch changed vs main, the same diff the pull request shows (`gdm --stat` for a summary) |
+| `gsh` / `glp` | `git show` (last commit and its diff) / `git log -p` (history with diffs) |
+| `gap` / `gbl` | `git add -p` (stage chunk by chunk) / `git blame` |
+| `gcm` / `gpf` | `git commit -m` / `git push --force-with-lease --force-if-includes` (won't overwrite someone else's push) |
+| `sbs <alias>` | side by side for one command: `sbs gds`, `sbs gdm` |
+| `lg` | lazygit: files on the left, diff on the right, stage single lines, commit, push. `\|` switches the diff to side by side |
+
+`lg` and Neovim's `space g g` use `lazygit/config.yml`, plus your own lazygit `config.yml` if you
+have one (yours wins).
+
+## Ghostty tabs
+
+Each tab's title shows a status dot, an icon for what's running, and a name:
+
+| Dot | When |
+|-----|------|
+| 🟢 | at the prompt: folder name (🌿 inside a git repo, 🏠 at home) |
+| 🟡 | a command is running: its name (`k get pods` shows ☸️ kubectl) |
+| 🔵 | an agent is running (claude, codex, opencode, pi): the folder it runs in, so several agents can be told apart |
+| 🔴 | ssh/mosh (shows the host), or the AWS profile or kube context looks like prod |
+
+In a prod context the tab also turns blue. `TABS_PROD_PATTERN` (default `*prod*`) decides what counts
+as prod and `TABS_PROD_TINT` sets the color (empty turns the tint off); set them in `~/.zshrc.local`.
+`tn <name>` renames a tab and keeps the program in the title; Ghostty's own rename (`ctrl+n` here)
+pins a fixed title instead. Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghostty.
 
 ## What's in it
 
@@ -121,10 +181,14 @@ context. Contexts with `prod` in the name turn red. Native Claude Code installs 
 | `shell/.zprofile` | login env: Homebrew + PATH (kept unique) |
 | `shell/.zshrc` | completions, aliases, fzf/zoxide/eza/bat, aws + kube helpers, prompt, plugins |
 | `shell/starship.toml` | prompt layout |
+| `shell/tabs.zsh`, `ghostty/tabs.conf` | Ghostty tab titles by rule (above) |
+| `nvim/` | Neovim config: the LazyVim starter plus `lua/plugins/dotfiles.lua` and `lua/dotfiles/` |
+| `bin/trials`, `trials.tsv` | the tools-being-tried list and the command that opens it |
 | `bin/awssetup` | AWS SSO profile generator (on PATH via `.zprofile`) |
 | `bin/mine-table`, `shell/mine.tsv` | the engine behind `mine`, and the tools/keys/notes it adds to your aliases and functions |
 | `bin/boxtable` | draws tab-separated text as a boxed table (used by mine and alias) |
-| `git/.gitconfig` | git behavior only, no identity (see below) |
+| `git/.gitconfig` | git behavior only, no identity (see below); delta draws diffs |
+| `lazygit/config.yml` | lazygit settings: delta diffs, side by side on `\|` |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |
 | `generator/` | re-renders the ChessKing board image |

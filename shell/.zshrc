@@ -21,8 +21,43 @@ command -v ghh >/dev/null && source "$(command -v ghh)"
 alias gst='git status'
 alias gpush='git push'
 alias gaa='git add .'
+alias gcm='git commit -m'
+alias gpf='git push --force-with-lease --force-if-includes'
+alias gd='git diff'
+alias gds='git diff --staged'
+alias gdw='git diff --word-diff'
+alias gdh='git diff HEAD'
+alias gsh='git show'
+alias glp='git log -p'
+alias gap='git add -p'
+alias gbl='git blame'
+# sbs <diff alias> - delta side by side for one command: sbs gds, sbs gdm. the trailing space
+# lets the alias after it expand
+alias sbs='DELTA_FEATURES=+side-by-side '
 alias p='python3'
 alias pwdc='pwd | pbcopy'
+
+# gdm - everything this branch changed vs main (or master), what the PR will show
+gdm() {
+  local base b
+  base=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null)
+  for b in origin/main origin/master main master; do
+    [[ -n $base ]] && break
+    git rev-parse -q --verify "$b" >/dev/null && base=$b
+  done
+  git diff "${base:-main}...HEAD" "$@"
+}
+
+# lazygit: the repo's lazygit/config.yml (diffs drawn by delta), then your own config.yml if you
+# have one, which wins. neovim's space g g reads the same list
+if command -v lazygit >/dev/null; then
+  alias lg='lazygit'
+  _lg_own="${XDG_CONFIG_HOME:-$HOME/.config}/lazygit/config.yml"
+  [[ $OSTYPE == darwin* && -z ${XDG_CONFIG_HOME:-} ]] && _lg_own="$HOME/Library/Application Support/lazygit/config.yml"
+  export LG_CONFIG_FILE="${DOTFILES_SHELL:h}/lazygit/config.yml"
+  [[ -f $_lg_own ]] && LG_CONFIG_FILE+=",$_lg_own"
+  unset _lg_own
+fi
 
 # DESTRUCTIVE: checks out main and hard-resets it to origin, discarding ALL local
 # commits and uncommitted work on main. named resetmain (not fetch) on purpose.
@@ -38,7 +73,12 @@ else
 fi
 command -v bat >/dev/null && alias cat='bat --paging=never --style=plain'
 
-export EDITOR="${EDITOR:-vim}"
+# neovim (lazyvim config in nvim/), nv for short. it's $EDITOR when installed, plain vim otherwise.
+# an editor you set yourself (code, nano...) is kept; a leftover plain vim gets upgraded
+if [[ -z ${EDITOR:-} || $EDITOR == vim ]]; then
+  command -v nvim >/dev/null && export EDITOR=nvim || export EDITOR=vim
+fi
+command -v nvim >/dev/null && alias nv='nvim'
 
 # gpg: which terminal to prompt on for commit signing
 export GPG_TTY=$(tty)
@@ -169,6 +209,9 @@ fi
 _bp="${HOMEBREW_PREFIX:-/opt/homebrew}/share"
 (( $+functions[_zsh_autosuggest_start] )) ||
   { [ -f "$_bp/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && source "$_bp/zsh-autosuggestions/zsh-autosuggestions.zsh"; }
+
+# ghostty tabs: "<status> <icon> <name>" titles by rule, tn to rename (does nothing outside ghostty)
+[ -f "$DOTFILES_SHELL/tabs.zsh" ] && source "$DOTFILES_SHELL/tabs.zsh"
 
 # machine-specific config, loaded after everything above so it wins
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

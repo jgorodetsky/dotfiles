@@ -1,0 +1,9 @@
+# lazygit settings. shell/.zshrc points LG_CONFIG_FILE here (and at your own config.yml after it,
+# which wins), so lg and neovim's space g g both use them.
+git:
+  # diffs drawn by delta. | switches to side by side and back
+  diffRenderers:
+    - command: delta --{{colorScheme}} --paging=never --line-numbers
+      name: delta
+    - command: delta --{{colorScheme}} --paging=never --line-numbers --side-by-side --width={{width}}
+      name: delta side by side

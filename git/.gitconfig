@@ -19,3 +19,14 @@
 	helper = !PATH=/opt/homebrew/bin:/usr/local/bin:$PATH gh auth git-credential
 [url "https://github.com/"]
 	insteadOf = git@github.com:
+
+# diffs you read on screen are drawn by delta (brew git-delta): gd, gds, git show, git add -p, lazygit.
+# plain less when delta isn't installed. scripts and agents still get plain patches, since git only
+# runs the pager when output goes to a terminal. sbs <alias> shows one command side by side
+[core]
+	pager = "if command -v delta >/dev/null 2>&1; then exec delta; else exec less; fi"
+[interactive]
+	diffFilter = "if command -v delta >/dev/null 2>&1; then exec delta --color-only; else exec cat; fi"
+[delta]
+	navigate = true
+	line-numbers = true

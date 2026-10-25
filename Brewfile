@@ -13,6 +13,7 @@ brew "fzf"       # fuzzy finder
 brew "tree"      # directory tree
 brew "eza"       # ls with colors + git status
 brew "bat"       # cat with syntax highlighting
+brew "git-delta" # git diffs with syntax colors + line numbers (delta)
 brew "zoxide"    # smarter cd (z / zi)
 brew "tlrc"      # tldr: short real-world examples for any command
 
@@ -30,6 +31,13 @@ brew "go"        # Go toolchain
 brew "ruff"      # Python linter / formatter
 brew "hashicorp/tap/terraform", trusted: true  # Terraform (via HashiCorp tap; removed from core on BUSL relicense)
 brew "helm"      # Kubernetes package manager
+
+# editor
+brew "neovim"           # editor (nvim), set up with lazyvim: see nvim/
+brew "lazygit"          # git in a terminal window (space g g in neovim)
+brew "fd"               # fast file finder (neovim's file search)
+brew "tree-sitter-cli"  # builds neovim's syntax parsers
+brew "node"             # runs the language servers neovim installs (pyright, bash, yaml)
 
 # tools
 brew "jgorodetsky/ghh/ghh", trusted: true  # git + GitHub workflow (your tap)

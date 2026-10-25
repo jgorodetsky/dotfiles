@@ -19,6 +19,25 @@ case "${1:-}" in
 esac
 STAMP="$(date +%Y%m%d%H%M%S)"
 MARK_START="# >>> dotfiles >>>"; MARK_END="# <<< dotfiles <<<"
+TABS_START="# >>> dotfiles tabs >>>"; TABS_END="# <<< dotfiles tabs <<<"
+
+# ghostty's config: the macos app support file if it exists, else xdg (same order as ghostty/install.sh)
+GHOSTTY_CONFIG="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+[ -f "$GHOSTTY_CONFIG" ] || GHOSTTY_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config"
+
+# put_block FILE START END BODY - our marked block in FILE. appended if missing; if it's there but
+# different (say it points at another checkout of this repo) it's rewritten, with a .bak of the file first
+put_block(){
+  local f="$1" s="$2" e="$3" b="$4" new
+  touch "$f"
+  if ! grep -qsF "$s" "$f"; then
+    printf '\n%s\n%s\n%s\n' "$s" "$b" "$e" >> "$f"; echo "  $f: appended the block, your existing lines are untouched"; return
+  fi
+  new="$(awk -v s="$s" -v e="$e" -v b="$b" '$0 == s { print; print b; skip = 1; next } $0 == e { skip = 0 } !skip' "$f")"
+  if [ "$new" = "$(cat "$f")" ]; then echo "  $f: block already up to date"; return; fi
+  cp "$f" "$f.bak-$STAMP"; printf '%s\n' "$new" > "$f"
+  echo "  $f: block now points at $DIR (old file kept as $f.bak-$STAMP)"
+}
 
 if [ -t 1 ]; then G=$'\033[32m'; R=$'\033[31m'; Y=$'\033[33m'; D=$'\033[2m'; B=$'\033[1m'; X=$'\033[0m'
 else G= R= Y= D= B= X=; fi
@@ -51,6 +70,8 @@ add_cfg(){ IDS+=("$1"); CLASSES+=(config); DESCS+=("$2"); KINDS+=(config); TARGE
 add_cfg shell   "append a source line to ~/.zprofile + ~/.zshrc"
 add_cfg git     "include repo git config in ~/.gitconfig"
 add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
+add_cfg ghostty-tabs "tab titles by rule: status dot, emoji, name (shell/tabs.zsh + ghostty/tabs.conf)"
+add_cfg nvim    "neovim config (lazyvim): link ~/.config/nvim to nvim/"
 add_cfg skills  "agent skills -> ~/.agents/skills + ~/.claude/skills"
 add_cfg macos   "key repeat, file extensions, screenshots, cmd+1 apps, ctrl+opt+arrow tiling"
 add_cfg claude  "claude code, native install (auto-updates itself)"
@@ -88,6 +109,10 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 missing
         shell)   for f in .zprofile .zshrc; do grep -qsF "$DIR/shell/$f" "$HOME/$f" || return 1; done
                  WHERE="~/.zprofile + ~/.zshrc [dotfiles block]" ;;
         git)     grep -qsF "$DIR/git/.gitconfig" "$HOME/.gitconfig" && WHERE="$HOME/.gitconfig [include]" || return 1 ;;
+        ghostty-tabs) grep -qsF "config-file = ?$DIR/ghostty/tabs.conf" "$GHOSTTY_CONFIG" || return 1
+                      WHERE="$GHOSTTY_CONFIG [dotfiles tabs block]" ;;
+        nvim)    [ "$(readlink "$HOME/.config/nvim" 2>/dev/null)" = "$DIR/nvim" ] || return 1
+                 WHERE="~/.config/nvim -> $DIR/nvim" ;;
         ghostty-theme) for t in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${t##*/}" ] || return 1; done
                        WHERE="$HOME/.config/ghostty/themes ($(ls "$DIR/ghostty/themes" | wc -l | tr -d ' ') themes)" ;;
         skills)  for s in "$DIR"/agents/skills/*/; do for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
@@ -173,19 +198,36 @@ if [ "${#cfg[@]}" -gt 0 ]; then for i in "${cfg[@]}"; do
         if [ -L "$t" ] && [ "$(readlink "$t")" = "$DIR/shell/$f" ]; then
           rm "$t"; [ -f "$t.pre-dotfiles.bak" ] && mv "$t.pre-dotfiles.bak" "$t"
           echo "  $t: replaced old symlink with your own file"; fi
-        touch "$t"
-        if grep -qsF "$MARK_START" "$t"; then echo "  $t: dotfiles block already present, left as is"
-        else printf '\n%s\n[ -f "%s" ] && source "%s"\n%s\n' "$MARK_START" "$DIR/shell/$f" "$DIR/shell/$f" "$MARK_END" >> "$t"
-             echo "  $t: appended dotfiles block, your existing lines are untouched"; fi
+        put_block "$t" "$MARK_START" "$MARK_END" "[ -f \"$DIR/shell/$f\" ] && source \"$DIR/shell/$f\""
       done ;;
     git)
       GC="$HOME/.gitconfig"; [ -L "$GC" ] && GC="$(perl -MCwd -e 'print Cwd::realpath(shift)' "$GC")"; touch "$GC"
-      grep -qsF "$DIR/git/.gitconfig" "$GC" || git config --file "$GC" --add include.path "$DIR/git/.gitconfig"
+      # repoint an include left by another checkout of this repo (a worktree, an old clone), else add one
+      old="$(git config --file "$GC" --get-all include.path 2>/dev/null | while IFS= read -r p; do
+        [ "$p" != "$DIR/git/.gitconfig" ] && [ "${p%/git/.gitconfig}/git/.gitconfig" = "$p" ] &&
+          [ -f "${p%/git/.gitconfig}/install.sh" ] && echo "$p"; done | head -1)"
+      if grep -qsF "$DIR/git/.gitconfig" "$GC"; then :
+      elif [ -n "$old" ]; then git config --file "$GC" --replace-all include.path "$DIR/git/.gitconfig" "^$old\$"
+        echo "  $GC: include repointed from $old"
+      else git config --file "$GC" --add include.path "$DIR/git/.gitconfig"; fi
       [ -z "$(git config --get user.email 2>/dev/null || true)" ] && \
         echo "  set identity:  git config --global user.name '...'  &&  git config --global user.email '...'" || true
       command -v gh >/dev/null && ! gh auth status >/dev/null 2>&1 && \
         echo "  log in to github (browser, token goes in keychain):  gh auth login" || true ;;
     ghostty-theme) [ -x "$DIR/ghostty/install.sh" ] && "$DIR/ghostty/install.sh" ;;
+    ghostty-tabs)
+      mkdir -p "$(dirname "$GHOSTTY_CONFIG")"
+      put_block "$GHOSTTY_CONFIG" "$TABS_START" "$TABS_END" "config-file = ?$DIR/ghostty/tabs.conf"
+      echo "  new tabs pick it up; quit and reopen ghostty for the tab bar style" ;;
+    nvim)
+      t="$HOME/.config/nvim"; mkdir -p "$HOME/.config"
+      if [ -L "$t" ] && [ -f "$(readlink "$t")/lua/dotfiles/helpers.lua" ]; then rm "$t"   # a link to another checkout of this repo
+      elif [ -e "$t" ] || [ -L "$t" ]; then mv "$t" "$t.bak-$STAMP"; echo "  kept your $t as $t.bak-$STAMP"; fi
+      ln -s "$DIR/nvim" "$t"; echo "  $t -> $DIR/nvim"
+      if command -v nvim >/dev/null; then
+        nvim --headless "+Lazy! restore" +qa >/dev/null 2>&1 && echo "  plugins installed at the versions in nvim/lazy-lock.json"
+        echo "  the first nvim start installs language tools in the background (a minute or two)"
+      else echo "  nvim isn't installed yet: ./install.sh --only neovim"; fi ;;
     skills)
       for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do mkdir -p "$t"
         for s in "$DIR"/agents/skills/*/; do n="$(basename "$s")"; d="$t/$n"
