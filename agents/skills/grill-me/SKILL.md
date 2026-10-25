@@ -21,6 +21,7 @@ Long interviews fill up context. If you hold answers only in your head, you will
 ## The checkpoint rule (non-negotiable)
 
 After EVERY user answer, BEFORE you ask the next question:
+
 - Append a structured entry to the capture file: the question topic, the key facts and decisions from their answer (in their words where the wording matters), and any flags (things they couldn't answer plus who should).
 - Update or correct earlier entries if a later answer changes them.
 - Only then ask the next question.
@@ -56,5 +57,6 @@ Date: {date} · Goal: {one line}
 ```
 
 ## At the end
+
 - Do a final read of the capture file for contradictions or gaps and reconcile them.
 - Give the user a short recap: what's captured, what's still flagged, and the suggested next step.

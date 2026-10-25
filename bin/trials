@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# trials - the list of tools being tried (trials.tsv at the repo root) as a table in neovim:
+# tab / shift+tab move between columns, cif edits a cell, :w saves. trials --plain prints it with boxtable
+set -euo pipefail
+f="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/trials.tsv"
+if [ "${1:-}" = --plain ] || [ ! -t 1 ] || ! command -v nvim >/dev/null; then exec boxtable < "$f"; fi
+exec nvim "$f"

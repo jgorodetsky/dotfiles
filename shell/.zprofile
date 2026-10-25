@@ -13,3 +13,6 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # this repo's scripts (awssetup)
 path=("${${(%):-%x}:A:h:h}/bin" $path)
+
+# machine-specific login settings, loaded last so they win
+[ -f "$HOME/.zprofile.local" ] && source "$HOME/.zprofile.local"

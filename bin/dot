@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# dot - the front door to this setup. dot --help lists what it does.
+set -euo pipefail
+
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+. "$DIR/lib/ui.sh"
+. "$DIR/lib/upgrade.sh"
+t(){ printf '%s' "${1/#$HOME/~}"; }
+
+# code lines in a file: not blank, not a comment
+lines_of(){ if [ -f "$1" ]; then grep -cvE '^[[:space:]]*(#|$)' "$1" || true; else echo 0; fi; }
+
+# the loader line in FILE: here (this folder), elsewhere DIR (another checkout), or missing
+loader(){ local f="$1" sub="$2" o
+  grep -qsF "$DIR/$sub" "$f" && { echo here; return 0; }
+  o="$(grep -oE "\"/[^\"]+/$sub\"" "$f" 2>/dev/null | head -1 | tr -d '"' || true)"
+  [ -n "$o" ] && { echo "elsewhere ${o%/$sub}"; return 0; }
+  echo missing; }
+
+# one "wired up" entry: STATUS TEXT [NOTE]
+WS=(); WT=(); WN=()
+wire(){ WS+=("$1"); WT+=("$2"); WN+=("${3:-}"); }
+
+wired(){ local f s n gc nv tabs ghc o i w col mk
+  for f in .zprofile .zshrc; do s="$(loader "$HOME/$f" "shell/$f")"
+    case "$s" in
+      here) wire ok "~/$f → shell/$f" ;;
+      elsewhere*) wire look "~/$f → shell/$f" "from $(t "${s#elsewhere }")" ;;
+      *) wire bad "~/$f → shell/$f" "not connected" ;;
+    esac
+  done
+  for f in .zprofile.local .zshrc.local; do
+    [ -f "$HOME/$f" ] && wire dot "~/$f" "$(lines_of "$HOME/$f") lines, this Mac only"; done
+  case ":$PATH:" in *":$DIR/bin:"*) wire ok "PATH → bin/" ;; *) wire look "PATH → bin/" "open a new terminal" ;; esac
+  gc="$(git config --file "$HOME/.gitconfig" --get-all include.path 2>/dev/null | grep '/git/\.gitconfig$' | head -1 || true)"
+  if [ "$gc" = "$DIR/git/.gitconfig" ]; then wire ok "~/.gitconfig → git/"
+  elif [ -n "$gc" ]; then wire look "~/.gitconfig → git/" "from $(t "${gc%/git/.gitconfig}")"
+  else wire bad "~/.gitconfig → git/" "not connected"; fi
+  nv="$(readlink "$HOME/.config/nvim" 2>/dev/null || true)"
+  if [ "$nv" = "$DIR/nvim" ]; then wire ok "~/.config/nvim → nvim/"
+  elif [ -n "$nv" ]; then wire look "~/.config/nvim → nvim/" "points at $(t "$nv")"
+  elif [ -e "$HOME/.config/nvim" ]; then wire look "~/.config/nvim" "your own config"
+  else wire bad "~/.config/nvim → nvim/" "not connected"; fi
+  ghc="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+  [ -f "$ghc" ] || ghc="${XDG_CONFIG_HOME:-$HOME/.config}/ghostty/config"
+  tabs="$(grep -oE 'config-file = \?/.+/ghostty/tabs\.conf' "$ghc" 2>/dev/null | sed 's/config-file = ?//' | head -1 || true)"
+  if [ "$tabs" = "$DIR/ghostty/tabs.conf" ]; then wire ok "ghostty → tabs.conf"
+  elif [ -n "$tabs" ]; then wire look "ghostty → tabs.conf" "from $(t "${tabs%/ghostty/tabs.conf}")"
+  else wire bad "ghostty → tabs.conf" "not connected"; fi
+  n=0; for f in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${f##*/}" ] || n=$((n + 1)); done
+  if [ "$n" = 0 ]; then wire ok "ghostty themes (copied)"; else wire bad "ghostty themes (copied)" "$n missing"; fi
+  n=0; o=0; for s in "$DIR"/agents/skills/*/; do f="$(basename "$s")"
+    for i in "$HOME/.claude/skills" "$HOME/.agents/skills"; do
+      if [ ! -d "$i/$f" ]; then o=$((o + 1))
+      elif ! diff -rq -x __pycache__ -x .dotfiles "$s" "$i/$f" >/dev/null 2>&1; then n=$((n + 1)); fi; done; done
+  if [ "$o" = 0 ]; then wire ok "skills (copied)"; else wire bad "skills (copied)" "$o missing"; fi
+
+  printf '\n%swired up%s  %s→ follows the repo on every pull · copied: changes when dot fix runs%s\n' "$B" "$X" "$D" "$X"
+  # two columns when there's room
+  w=$(( UI_W >= 104 ? 48 : UI_W - 4 )); col=0
+  for i in "${!WT[@]}"; do
+    case "${WS[$i]}" in ok) mk="${G}✓${X}" ;; bad) mk="${R}✗${X}" ;; dot) mk="${D}·${X}" ;; *) mk="${Y}~${X}" ;; esac
+    if [ "$col" = 1 ]; then s="$(cut_to "${WT[$i]}${WN[$i]:+  ${WN[$i]}}" $((UI_W - w - 6)))"
+    else s="$(cut_to "${WT[$i]}${WN[$i]:+  ${WN[$i]}}" $((w - 4)))"; fi; n=${#s}
+    # the note part dim
+    [ -n "${WN[$i]}" ] && [ "${#s}" -gt "${#WT[$i]}" ] && s="${s:0:${#WT[$i]}}$D${s:${#WT[$i]}}$X"
+    if [ "$UI_W" -ge 104 ] && [ "$col" = 0 ]; then printf '  %s %s%*s' "$mk" "$s" $((w - 4 - n)) ''; col=1
+    else printf '  %s %s\n' "$mk" "$s"; col=0; fi
+  done
+  [ "$col" = 1 ] && echo
+  echo; return 0; }
+
+# after the check: the likely next step is already selected
+next_step(){ local fix=0 up=0 clt="" d=0 name cmd
+  [ -f "${DOT_STATE:-}" ] && . "$DOT_STATE"
+  [ "$UI_TTY" = 1 ] || { printf 'next: dot fix · dot upgrade · dot alias · dot edit   (dot --help)\n'; return 0; }
+  if [ "$fix" -gt 0 ]; then d=0; elif [ "$up" -gt 0 ] || [ -n "$clt" ]; then d=1; else d=5; fi
+  ui_menu "What now?" "$d" "Fix what needs you|$fix item(s) · same as dot fix" "Upgrade|$up newer version(s) · same as dot upgrade" \
+    "Add an alias|same as dot alias NAME 'COMMAND'" "Remove an alias|same as dot alias -d NAME" "Open a file|same as dot edit" "Nothing|"
+  case "$UI_PICK" in
+    0) exec "$DIR/install.sh" ;;
+    1) upgrade_flow; ui_end ;;
+    2) ui_ask "Alias name"; name="$UI_TEXT"; [ -n "$name" ] || return 0
+       ui_ask "What should $name run"; cmd="$UI_TEXT"; [ -n "$cmd" ] || return 0
+       add_alias "$name" "$cmd" ;;
+    3) ui_ask "Which alias"; [ -n "$UI_TEXT" ] && del_alias "$UI_TEXT" ;;
+    4) ui_menu "Which file?" 0 "shell|$(t "$DIR/shell/.zshrc"), every machine" "local|~/.zshrc.local, this Mac only" \
+         "profile|$(t "$DIR/shell/.zprofile"), PATH and env" "git|$(t "$DIR/git/.gitconfig")" "brew|$(t "$DIR/Brewfile")" "mine|notes for the mine table"
+       edit "$(printf 'shell local profile git brew mine' | cut -d' ' -f$((UI_PICK + 1)))" ;;
+  esac
+  return 0; }
+
+usage(){ local w=$(( UI_W - 30 ))
+  h(){ printf '  %s%s%s %s%s%s\n' "$B" "$(pad "$1" 25)" "$X" "$D" "$(cut_to "$2" "$w")" "$X"; }
+  printf '%sdot%s  %sthe front door to this setup%s\n\n' "$B" "$X" "$D" "$X"
+  printf 'look\n';            h "dot" "what needs you, what's wired, then a menu"
+  printf '\nfix and upgrade\n'; h "dot fix" "the installer: check, shell, pick, install"
+                               h "dot upgrade" "newer versions; you tick which"
+                               h "dot update" "pull the repo, then dot fix"
+  printf '\naliases\n';        h "dot alias NAME 'CMD'" "add one; asks: every machine or this Mac"
+                               h "dot alias -d NAME" "remove one; asks where"
+  printf '\nfiles\n';          h "dot edit [what]" "open the file you'd change"
+  printf '  %s%s%s\n' "$D" "$(cut_to "what: shell local profile git brew mine nvim ghostty" $((UI_W - 4)))" "$X"
+  return 0; }
+
+# every alias the real shell has: name<TAB>command
+all_aliases(){ zsh -i -c 'for k v in ${(kv)aliases}; do print -r -- "$k	$v"; done' 2>/dev/null </dev/null || true; }
+
+add_alias(){
+  local name="${1:-}" cmd="${2:-}" sq all have twin kind where f q ln desc tmp
+  [ -n "$name" ] && [ -n "$cmd" ] || { echo "usage: dot alias NAME 'COMMAND'   e.g. dot alias gl 'git log --oneline -20'" >&2; exit 2; }
+  [[ "$name" =~ ^[A-Za-z0-9_.-]+$ ]] || { echo "dot: an alias name is letters, numbers, - _ . only" >&2; exit 2; }
+  zsh -n -c "$cmd" 2>/dev/null || { echo "dot: that command doesn't parse on its own (a quote left open?)" >&2; exit 2; }
+  sq="'\\''"; q="${cmd//\'/$sq}"; ln="alias $name='$q'"   # a ' inside becomes '\''
+  all="$(all_aliases)"
+  have="$(printf '%s\n' "$all" | awk -F'\t' -v n="$name" '$1 == n { print $2; exit }')"
+  twin="$(printf '%s\n' "$all" | awk -F'\t' -v n="$name" -v c="$cmd" '$1 != n && $2 == c { printf "%s ", $1 }')"
+  kind="$(zsh -c "whence -w -- '$name'" 2>/dev/null | awk '{ print $2 }' || true)"
+  printf '\n%s◆%s  %s%s%s\n' "$C" "$X" "$B" "$ln" "$X"
+  [ -n "$have" ] && printf '%s│%s  %s~%s %s already runs: %s (this replaces it)\n' "$C" "$X" "$Y" "$X" "$name" "$have"
+  [ -n "$twin" ] && printf '%s│%s  %s~%s that command already has a name: %s(you can use that instead)\n' "$C" "$X" "$Y" "$X" "$twin"
+  [ "$kind" = command ] && [ -z "$have" ] && printf '%s│%s  %s~%s %s is also a program (%s); the alias hides it\n' "$C" "$X" "$Y" "$X" "$name" "$(command -v "$name")"
+  printf '%s│%s\n' "$C" "$X"
+  ui_menu "Where should it go?" 0 "Every machine|the repo's shell/.zshrc, then you can commit it" "This Mac only|~/.zshrc.local, never committed"
+  if [ "$UI_PICK" = 0 ]; then where=repo; f="$DIR/shell/.zshrc"; else where=local; f="$HOME/.zshrc.local"; fi
+  ui_ask "What does it do? One line for the mine table"; desc="$UI_TEXT"
+  touch "$f"; cp -p "$f" "$f.bak-dot"; tmp="$(mktemp)"
+  if grep -qE "^alias $name=" "$f"; then
+    awk -v n="alias $name=" -v l="$ln" 'index($0, n) == 1 && !done { print l; done = 1; next } { print }' "$f" > "$tmp"
+  elif [ "$where" = repo ]; then
+    # aliases added this way live in one block, above the machine-specific line
+    awk -v l="$ln" -v h="# aliases added with dot alias" '
+      $0 == h { print; inb = 1; next }
+      inb && !/^alias / { print l; inb = 0; done = 1 }
+      !done && /^# machine-specific config/ { print h; print l; print ""; done = 1 }
+      { print }
+      END { if (inb) print l; else if (!done) { print ""; print h; print l } }' "$f" > "$tmp"
+  else
+    { cat "$f"; [ -n "$desc" ] && printf '# %s - %s\n' "$name" "$desc"; printf '%s\n' "$ln"; } > "$tmp"
+  fi
+  cat "$tmp" > "$f"; rm -f "$tmp"
+  if ! zsh -n "$f" 2>/dev/null; then cp -p "$f.bak-dot" "$f"; printf '%s✗%s  the file wouldn'"'"'t parse with that line; put back as it was\n' "$R" "$X"; exit 1; fi
+  rm -f "$f.bak-dot"
+  printf '%s✓%s  added to %s\n' "$G" "$X" "$(t "$f")"
+  if [ "$where" = repo ]; then
+    if [ -n "$desc" ] && ! grep -qE "^$name	" "$DIR/shell/mine.tsv"; then
+      printf '%s\talias\t\t%s\t\n' "$name" "$desc" >> "$DIR/shell/mine.tsv"; printf '%s✓%s  note added to shell/mine.tsv\n' "$G" "$X"; fi
+    grep -qsE "^alias $name=" "$HOME/.zshrc.local" &&
+      printf '%s~%s  ~/.zshrc.local also sets %s and loads later, so this Mac keeps that one\n' "$Y" "$X" "$name"
+    printf '%s│%s\n' "$D" "$X"
+    ui_menu "Commit it, so other machines get it on their next pull?" 1 "Yes|your signing prompt may pop up; not pushed" "Not now|it works here; commit and push when you're ready"
+    if [ "$UI_PICK" = 0 ]; then git -C "$DIR" commit -q -m "shell: alias $name" -- shell/.zshrc shell/mine.tsv && printf '%s✓%s  committed (not pushed)\n' "$G" "$X"; fi
+  fi
+  printf '   open a new terminal, or run: %sexec zsh%s\n' "$B" "$X"
+}
+
+# remove an alias. every place that sets it is a choice, plus "this Mac only" for one the repo sets
+del_alias(){ local name="${1:-}" f tmp i ln n
+  local -a where=() label=() opt=()
+  [ -n "$name" ] || { echo "usage: dot alias -d NAME" >&2; exit 2; }
+  for f in "$DIR/shell/.zshrc" "$HOME/.zshrc.local" "$HOME/.zshrc" "$DIR/shell/.zprofile" "$HOME/.zprofile.local"; do
+    [ -f "$f" ] && grep -qE "^[[:space:]]*alias (-- )?$name=" "$f" && where+=("$f"); done
+  if [ "${#where[@]}" -eq 0 ]; then
+    n="$(zsh -i -c "whence -w -- '$name'" 2>/dev/null </dev/null | awk '{ print $2 }' || true)"
+    case "$n" in
+      function) echo "dot: $name is a function, not an alias. open the file with: dot edit shell (or dot edit local)" ;;
+      alias) echo "dot: $name is set somewhere outside these files (a plugin or a sourced file); nothing removed" ;;
+      *) echo "dot: no alias called $name" ;;
+    esac; exit 1
+  fi
+  printf '\n%s◆%s  %sRemove alias %s?%s\n' "$C" "$X" "$B" "$name" "$X"
+  for f in "${where[@]}"; do
+    ln="$(grep -m1 -E "^[[:space:]]*alias (-- )?$name=" "$f" | sed 's/^[[:space:]]*//')"
+    case "$f" in "$DIR"/*) label+=("$(t "$f") (every machine)") ;; *) label+=("$(t "$f") (this Mac)") ;; esac
+    printf '%s│%s  %s%s%s  %s%s%s\n' "$C" "$X" "$B" "$(cut_to "$ln" 60)" "$X" "$D" "${label[$((${#label[@]} - 1))]}" "$X"
+  done
+  printf '%s│%s\n' "$C" "$X"
+  for i in "${!where[@]}"; do opt+=("From ${label[$i]}|"); done
+  # the repo keeps it for other machines, this one turns it off in ~/.zshrc.local
+  [ "${where[0]}" = "$DIR/shell/.zshrc" ] && opt+=("Only on this Mac|add unalias $name to ~/.zshrc.local; the repo keeps it")
+  [ "${#where[@]}" -gt 1 ] && opt+=("From all of them|")
+  opt+=("Cancel|")
+  ui_menu "Where should it go away?" 0 "${opt[@]}"
+  case "${opt[$UI_PICK]}" in
+    Cancel*) echo "   nothing changed."; exit 0 ;;
+    "Only on this Mac"*) printf 'unalias %s 2>/dev/null   # the repo sets it; off on this Mac (dot alias -d)\n' "$name" >> "$HOME/.zshrc.local"
+                         printf '%s✓%s  turned off in ~/.zshrc.local\n' "$G" "$X"; where=() ;;
+    "From all"*) ;;
+    *) where=("${where[$UI_PICK]}") ;;
+  esac
+  for f in ${where[@]+"${where[@]}"}; do
+    cp -p "$f" "$f.bak-dot"; tmp="$(mktemp)"
+    # the alias line, and a "# name - ..." note right above it (the kind dot alias writes)
+    awk -v re="^[[:space:]]*alias (-- )?$name=" -v note="# $name - " '
+      { line[NR] = $0 } END {
+        for (i = 1; i <= NR; i++) {
+          if (line[i] ~ re) { drop[i] = 1; if (i > 1 && index(line[i-1], note) == 1) drop[i-1] = 1 }
+        }
+        for (i = 1; i <= NR; i++) if (!drop[i]) print line[i]
+      }' "$f" > "$tmp"
+    cat "$tmp" > "$f"; rm -f "$tmp"
+    if ! zsh -n "$f" 2>/dev/null; then cp -p "$f.bak-dot" "$f"; printf '%s✗%s  %s wouldn'"'"'t parse without it; put back as it was\n' "$R" "$X" "$(t "$f")"; continue; fi
+    rm -f "$f.bak-dot"; printf '%s✓%s  removed from %s\n' "$G" "$X" "$(t "$f")"
+    if [ "$f" = "$DIR/shell/.zshrc" ]; then
+      # an "off on this Mac" line for it has nothing left to turn off
+      grep -qE "^unalias $name 2>/dev/null   # the repo sets it" "$HOME/.zshrc.local" 2>/dev/null &&
+        { grep -vE "^unalias $name 2>/dev/null   # the repo sets it" "$HOME/.zshrc.local" > "$HOME/.zshrc.local.tmp"; cat "$HOME/.zshrc.local.tmp" > "$HOME/.zshrc.local"; rm -f "$HOME/.zshrc.local.tmp"; }
+      grep -qE "^$name	" "$DIR/shell/mine.tsv" && { grep -vE "^$name	" "$DIR/shell/mine.tsv" > "$DIR/shell/mine.tsv.tmp"; mv "$DIR/shell/mine.tsv.tmp" "$DIR/shell/mine.tsv"; printf '%s✓%s  its note in shell/mine.tsv too\n' "$G" "$X"; }
+      printf '%s│%s\n' "$D" "$X"
+      ui_menu "Commit it, so other machines lose it on their next pull?" 1 "Yes|your signing prompt may pop up; not pushed" "Not now|gone here; commit and push when you're ready"
+      [ "$UI_PICK" = 0 ] && git -C "$DIR" commit -q -m "shell: remove alias $name" -- shell/.zshrc shell/mine.tsv && printf '%s✓%s  committed (not pushed)\n' "$G" "$X"
+    fi
+  done
+  printf '   open a new terminal, or run: %sexec zsh%s (this one still has it until then)\n' "$B" "$X"
+}
+
+edit(){ local f
+  case "${1:-}" in
+    shell|zshrc) f="$DIR/shell/.zshrc" ;; profile|zprofile) f="$DIR/shell/.zprofile" ;;
+    local) f="$HOME/.zshrc.local" ;; git) f="$DIR/git/.gitconfig" ;; brew) f="$DIR/Brewfile" ;;
+    mine) f="$DIR/shell/mine.tsv" ;; nvim) f="$DIR/nvim" ;; ghostty|tabs) f="$DIR/ghostty/tabs.conf" ;;
+    "") printf 'dot edit WHAT:\n'
+        printf '  shell    %s  every machine, interactive shell\n' "$(t "$DIR/shell/.zshrc")"
+        printf '  profile  %s  every machine, login (PATH, env)\n' "$(t "$DIR/shell/.zprofile")"
+        printf '  local    ~/.zshrc.local  this Mac only, loads last\n'
+        printf '  git      %s\n  brew     %s\n  mine     %s  notes for the mine table\n' "$(t "$DIR/git/.gitconfig")" "$(t "$DIR/Brewfile")" "$(t "$DIR/shell/mine.tsv")"
+        printf '  nvim     %s\n  ghostty  %s\n' "$(t "$DIR/nvim")" "$(t "$DIR/ghostty/tabs.conf")"; return 0 ;;
+    *) echo "dot: don't know '$1'. try: dot edit" >&2; exit 2 ;;
+  esac
+  exec ${EDITOR:-vim} "$f"
+}
+
+update(){
+  local br; br="$(git -C "$DIR" branch --show-current)"
+  git -C "$DIR" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1 || { echo "dot: branch $br has no remote to pull from; nothing pulled"; exit 1; }
+  git -C "$DIR" pull --ff-only || { echo "dot: can't fast-forward (local commits?). sort it out in $(t "$DIR"), then rerun"; exit 1; }
+  exec "$DIR/install.sh"
+}
+
+case "${1:-}" in
+  ""|map|check) DOT_STATE="$(mktemp)"; export DOT_STATE
+                "$DIR/install.sh" --check; wired; next_step; rm -f "$DOT_STATE" ;;
+  upgrade) printf '\n%sdot upgrade%s\n\n' "$B" "$X"; upgrade_flow; ui_end ;;
+  fix) shift; exec "$DIR/install.sh" "$@" ;;
+  alias) shift; case "${1:-}" in -d|--delete) shift; del_alias "$@" ;; *) add_alias "$@" ;; esac ;;
+  edit) shift; edit "$@" ;;
+  update) update ;;
+  -h|--help|help) usage ;;
+  *) echo "dot: unknown '$1'. try: dot --help" >&2; exit 2 ;;
+esac

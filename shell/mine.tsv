@@ -21,6 +21,7 @@ tldr	tool	man / --help	5-8 real examples for any public command (mine is for you
 mine	function		this table: your tools, keys, aliases and functions. type to filter when it's long	mine; mine aws; mine cd; mine --edit
 alias	function	alias (plain list)	with nothing after it, shows your aliases as a table; piped or with arguments it is the normal alias	alias; alias | grep git
 boxtable	tool		draws any tab-separated text as a boxed table that fits the screen; tall tables open searchable	printf 'a\tb\n1\t2\n' | boxtable
+dot	tool		this setup's front door: what needs you and what's wired to the repo; dot fix installs, dot alias adds an alias, dot edit opens the right file	dot; dot fix; dot alias gl 'git log --oneline -20'; dot edit local
 awssetup	tool	hand-editing ~/.aws/config	one-time aws sso setup: a profile for every account + role	awssetup
 awslogin	function	export AWS_PROFILE=...	pick an aws profile for this shell, logs in only if expired	awslogin; awslogin dev-readonly
 awsme	alias		which aws account + role you're using right now	
@@ -41,3 +42,22 @@ tree	tool		draw folders as a tree	tree -L 2
 ruff	tool		check and auto-format python code	ruff check .
 go	tool		the go language toolchain	go run .
 gtheme	alias		pick a ghostty color theme	
+nvim (neovim, lazyvim)	tool	vim, vs code for quick edits	keyboard editor with code checks, file search and git built in; colors follow your ghostty theme	nv file; space then C (cheat sheet); :Tutor
+nv	alias		short for nvim	nv file
+trials	tool	boxtable < trials.tsv	the list of tools being tried, as an editable table in neovim	trials; trials --plain
+tn	tool	ghostty's ctrl+n rename	names this tab and keeps showing what runs in it (api · nvim)	tn api; tn (back to automatic)
+gd	alias		changes not yet git add-ed	gd; gd file.py
+gds	alias		staged changes: what the next commit will contain	gds
+gdw	alias		changed words highlighted instead of whole lines (yaml, markdown, configs)	gdw
+gdh	alias		everything since the last commit, staged or not	gdh
+gdm	function			gdm; gdm --stat
+gcm	alias		commit with a message	gcm "fix login"
+gpf	alias		force push after an amend or rebase; refuses if someone else pushed meanwhile	gpf
+delta (git-delta)	tool	git's plain red/green diffs	draws every diff you read on screen: syntax colors, line numbers. nothing to type, it runs under gd, gds, lazygit	gds; sbs gds; n / N jump between files
+gsh	alias		the last commit and its diff; gsh <sha> for any commit	gsh; gsh HEAD~2
+glp	alias		history with each commit's diff	glp; glp file.py
+gap	alias		stage chunk by chunk: y yes, n no, q stop	gap
+gbl	alias		who last changed each line	gbl file.py
+sbs	alias		delta side by side for one command, in front of any diff alias	sbs gds; sbs gdm
+lg	alias		git in a terminal window: files on the left, diff on the right, stage lines, commit, push	lg; | switches side by side
+cl	alias		clear	

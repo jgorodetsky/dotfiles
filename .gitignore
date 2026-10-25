@@ -9,3 +9,6 @@
 
 # python
 __pycache__/
+
+# neovim: lazyvim writes its own state here
+nvim/lazyvim.json
