@@ -4,9 +4,9 @@
 03	tmux-floax	term	dropped	tmux plugin (needs 01)	floating pop-up terminal over tmux
 04	sesh	term	dropped	brew (needs 01)	open saved project setups in one go
 05	catppuccin	term	dropped	tmux plugin (needs 01)	status bar color theme
-06	herdr	term		brew	tmux for agents: busy, stuck, done
-07	tuios	term		brew	tmux that looks like a desktop
-08	wezterm	term		cask, ~/.wezterm.lua	other terminal app, set up in lua
+06	herdr	term	later	brew	workspaces for agents: working, blocked, idle read off each pane (uninstalled, learn more later)
+07	tuios	term	dropped	brew	tmux that looks like a desktop, now with agent tools (demo 10-25)
+08	wezterm	term	dropped	cask, ~/.wezterm.lua	other terminal app, set up in lua; ghostty covers it (demo 10-25)
 09	worktrunk (wt)	tree		brew, zshrc	create and clean up worktrees
 10	workmux	tree	dropped	brew (needs 01)	one command: branch+window+agent
 11	treehouse	tree		tbd	reusable pool of worktrees
@@ -15,8 +15,8 @@
 14	television (tv)	shell		brew, zshrc	fzf with ready-made lists
 15	nushell	shell		brew	shell where output is a table
 16	neovim + lazyvim	editor	keep	brew, nvim/ -> ~/.config/nvim	editor, tables via trials (kickstart lost)
-17	helix	editor		brew, ~/.config/helix	vim-like editor, no setup needed
-18	zed	editor		cask	fast desktop editor
+17	helix	editor	dropped	brew, ~/.config/helix	vim-like editor, no setup needed; nv kept (demo 10-25)
+18	zed	editor	dropped	cask	fast desktop editor; nv and vs code cover it (demo 10-25)
 19	superfile	editor		brew, config	good-looking terminal file browser
 20	yazi	editor		brew, zshrc, config	most popular terminal file browser
 21	mise	env		brew, zshrc	per-folder tool versions + env vars

@@ -14,6 +14,29 @@ local function clear_backgrounds()
   end
 end
 
+-- tables with a "status" column get their rows colored by it, like the tab dots:
+-- keep green, later yellow, dropped red (trials.tsv uses this)
+local status_colors = { keep = "DiagnosticOk", later = "DiagnosticWarn", dropped = "DiagnosticError" }
+local status_ns = vim.api.nvim_create_namespace("dotfiles_status")
+
+local function color_status(buf)
+  vim.api.nvim_buf_clear_namespace(buf, status_ns, 0, -1)
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local sep = vim.bo[buf].filetype == "tsv" and "\t" or ","
+  local col
+  for i, name in ipairs(vim.split(lines[1] or "", sep, { plain = true })) do
+    if vim.trim(name):lower() == "status" then col = i end
+  end
+  if not col then return end
+  for lnum = 2, #lines do
+    local group = status_colors[vim.trim(vim.split(lines[lnum], sep, { plain = true })[col] or "")]
+    if group then
+      -- above csvview's own highlights (default extmark priority is 4096)
+      vim.api.nvim_buf_set_extmark(buf, status_ns, lnum - 1, 0, { end_col = #lines[lnum], hl_group = group, priority = 5000 })
+    end
+  end
+end
+
 -- the cheat sheet (cheat.md next to init.lua) in a floating window
 local function cheat()
   local lines = vim.fn.readfile(vim.fn.stdpath("config") .. "/cheat.md")
@@ -53,9 +76,14 @@ function M.setup()
   -- csv and tsv files open as a table: aligned columns, borders, header pinned at the top
   vim.api.nvim_create_autocmd("FileType", {
     pattern = { "csv", "tsv" },
-    callback = function()
+    callback = function(ev)
       vim.wo.wrap = false
       vim.cmd("CsvViewEnable")
+      color_status(ev.buf)
+      vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+        buffer = ev.buf,
+        callback = function() color_status(ev.buf) end,
+      })
     end,
   })
 
