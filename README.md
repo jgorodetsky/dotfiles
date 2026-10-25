@@ -3,8 +3,9 @@
 My macOS setup: shell, git, Homebrew packages, Ghostty terminal themes and tabs, Neovim, and AI agent skills
 that work in Claude Code, Codex, Cursor, Gemini CLI, OpenCode and GitHub Copilot.
 
-`./install.sh` runs a health check, shows what's already installed (and where), and lets you
-fuzzy-pick what to add. It never replaces your existing files. See [Never overwrites](#never-overwrites).
+`./install.sh` (later: `dot fix`) checks what's already set up, sorts the lines your shell files
+already have, and installs what's missing. It never replaces your existing files. See
+[Never overwrites](#never-overwrites).
 
 ## Install
 
@@ -14,9 +15,27 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-- `./install.sh` - health check, then fuzzy-pick what to install (ALL / by class / by feature)
-- `./install.sh --all` - install everything missing, no prompt (the `MISSING` row in the picker does the same)
-- `./install.sh --check` - health check only, installs nothing
+`./install.sh` runs on its own screen (like vim) in four steps, one decision per screen, and
+leaves a short receipt in your terminal when it's done:
+
+```
+ ✓ check ━━ ● shell ━━ ○ pick ━━ ○ install
+```
+
+1. **check** - what needs you (why, and what to do), with everything that's fine folded into one
+   line per group
+2. **shell** - the lines in `~/.zshrc` / `~/.zprofile` besides the loader, in three boxes:
+   delete (the repo has them), move (only yours, to `~/.zshrc.local`), you pick (same job under
+   another name, a clash, or something destructive). Then merge / keep / overwrite, a question for
+   each line in the third box, a check that your shell behaves the same, and a yes before writing
+3. **pick** - fix what needs it (already selected), choose items from the full list, upgrade, or nothing
+4. **install** - one line per item with a spinner; the full output goes to `~/.cache/dotfiles/`
+
+Arrow keys and enter answer everything; `q` stops at any step.
+
+- `./install.sh --all` - fix everything that needs it, no questions (shell lines merged with the
+  safe choices)
+- `./install.sh --check` - the check screen only, changes nothing
 - `./install.sh --only shell,skills` - (re)apply just those features
 
 Safe to re-run and safe to `git pull` over an existing setup.
@@ -25,12 +44,12 @@ Safe to re-run and safe to `git pull` over an existing setup.
 
 | Feature | What it does to your machine |
 |---------|------------------------------|
-| `shell` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files. Your own lines stay above it, and re-running never adds it twice. Re-running from another checkout (a worktree, say) points the block at that checkout, with a `.bak-<timestamp>` of the file first. Older installs that symlinked these files get your original file back first. |
+| `shell` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files, and never adds it twice. Lines you already had are shown grouped by where they'd go, and you pick: **merge** (ones the repo already does are deleted, yours move to `~/.zshrc.local`, an alias the repo has under another name or a clash asks you), **keep** the file as it is, or **overwrite** (loader only; your lines stay in the backup). Before writing it loads your shell both ways and shows anything that would behave differently. Backups are `.bak-<timestamp>`. Re-running from another checkout (a worktree, say) points the block at that checkout. Older installs that symlinked these files get your original file back first. |
 | `git` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. |
 | `ghostty-theme` | Appends a marked block to your Ghostty config. If you already have a different theme file or `gtheme` with the same name, yours is kept as `<file>.bak-<timestamp>`. |
 | `ghostty-tabs` | Appends a marked block to your Ghostty config that loads `ghostty/tabs.conf`. Same re-pointing rule as `shell`. |
 | `nvim` | Links `~/.config/nvim` to `nvim/`. An existing `~/.config/nvim` of your own is kept as `~/.config/nvim.bak-<timestamp>`. |
-| `skills` | Adds skill folders to `~/.agents/skills` and `~/.claude/skills`. If you already have a different skill with the same name, it's skipped. |
+| `skills` | Adds skill folders to `~/.agents/skills` and `~/.claude/skills`. A copy you've changed (or one that came from another checkout) is only replaced if you say so: keep all of yours, overwrite all, or choose each one. Replaced copies are saved in `~/.cache/dotfiles/`, outside the skill folders so they don't load as a second skill. |
 | `macos` | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
 | `aws` | Runs `awssetup`, which writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
@@ -42,18 +61,41 @@ To remove the shell layer, delete the `# >>> dotfiles >>>` block from `~/.zshrc`
 ## Machine-specific config
 
 Anything that belongs to one machine or one job (work aliases, internal tools, secrets wiring)
-goes in `~/.zshrc.local`. It's never committed, and the repo `.zshrc` loads it near the end so
-it wins over anything defined here. Lines you add to `~/.zshrc` below the dotfiles block win too.
+goes in `~/.zshrc.local` (login settings: `~/.zprofile.local`). They're never committed, and the
+repo files load them last so they win over anything defined here.
 
 ```
-~/.zshrc
-  your / IT's existing lines        <- untouched
+~/.zshrc                              this Mac's file: only the loader
   # >>> dotfiles >>>
-    source ~/dotfiles/shell/.zshrc  <- generic config
-      ... source ~/.zshrc.local     <- machine-specific, wins
+    source ~/dotfiles/shell/.zshrc    every machine (commit changes here)
+      ... source ~/.zshrc.local       this Mac only, loads last, wins
   # <<< dotfiles <<<
-  lines you add later               <- also win
 ```
+
+Lines that show up in `~/.zshrc` later (an installer appending `export PATH=...`) are fine; the
+next `./install.sh` shows them under `shell` and sorts them the same way.
+
+`dot` is the front door once it's installed:
+
+- `dot` - the check screen, then what's wired to the repo (`→` follows the repo on every pull,
+  `(copied)` only changes when `dot fix` runs), then a "what now?" menu with the likely next step
+  selected: fix, upgrade, add or remove an alias, open a file
+- `dot fix` - the installer above
+- `dot upgrade` - newer versions of what you installed, as tick boxes. Your Brewfile packages
+  come first. A new major version, or a minor bump of terraform or kubectl (where versions
+  have to match your state files or clusters), starts unticked with the reason next to it.
+  If Xcode's command line tools are too old for brew to install with, it says so first and can
+  update just the tools (Homebrew's own method: no macOS update, no restart, asks for your
+  password) or open Software Update. It uses brew's own version info (refreshed about daily) unless you pick
+  refresh
+- `dot alias NAME 'COMMAND'` - add an alias. It tells you if the name is taken or the command
+  already has a name, then asks: every machine (the repo's `shell/.zshrc`, an optional note for
+  `mine`, then offers to commit) or this Mac only (`~/.zshrc.local`)
+- `dot alias -d NAME` - remove an alias. It finds every file that sets it and asks where: one of
+  those files, all of them, or (for one the repo sets) only on this Mac, which adds an `unalias`
+  line to `~/.zshrc.local` and leaves the repo alone
+- `dot edit [shell|local|profile|git|brew|mine|nvim|ghostty]` - open the file you'd change
+- `dot update` - `git pull --ff-only`, then `dot fix`
 
 If the machine already has an oh-my-zsh theme or powerlevel10k, the starship prompt is skipped,
 and a `~/.config/starship.toml` of your own is used instead of the repo's.
@@ -111,7 +153,7 @@ and piped output is always plain. `boxtable --plain` never opens the search.
 | `ccupdate` | update Claude Code now, however it was installed |
 | `tn <name>` | name this Ghostty tab; it keeps showing what runs in it (`api · nvim`). `tn` alone goes back to automatic |
 | `nv <file>` | Neovim with the LazyVim setup (see [Neovim](#neovim)) |
-| `trials` | the list of tools being tried (`trials.tsv`) as an editable table in Neovim. `trials --plain` prints it |
+| `trials` | the list of tools being tried (`trials.tsv`) as an editable table in Neovim, rows colored by status (keep green, later yellow, dropped red). `trials --plain` prints it |
 
 The prompt (starship) shows the folder, git branch and status, AWS profile and region, and kube
 context. Contexts with `prod` in the name turn red. Native Claude Code installs auto-update on their own;
@@ -178,6 +220,9 @@ pins a fixed title instead. Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, a
 |------|------|
 | `Brewfile` | packages (cli, prompt, cloud, languages, terminal, editor); also the source for the health check |
 | `install.sh` | health check + installer |
+| `shell/adopt.zsh` | sorts the lines a machine already has in `~/.zshrc` / `~/.zprofile` (used by install.sh) |
+| `bin/dot` | the front door: check + what's wired up, `dot fix`, `dot alias`, `dot edit`, `dot update` |
+| `lib/ui.sh` | the installer's screens: its own screen, step bar, arrow-key menus, spinner rows |
 | `shell/.zprofile` | login env: Homebrew + PATH (kept unique) |
 | `shell/.zshrc` | completions, aliases, fzf/zoxide/eza/bat, aws + kube helpers, prompt, plugins |
 | `shell/starship.toml` | prompt layout |
