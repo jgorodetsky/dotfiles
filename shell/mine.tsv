@@ -21,6 +21,7 @@ tldr	tool	man / --help	5-8 real examples for any public command (mine is for you
 mine	function		this table: your tools, keys, aliases and functions. type to filter when it's long	mine; mine aws; mine cd; mine --edit
 alias	function	alias (plain list)	with nothing after it, shows your aliases as a table; piped or with arguments it is the normal alias	alias; alias | grep git
 boxtable	tool		draws any tab-separated text as a boxed table that fits the screen; tall tables open searchable	printf 'a\tb\n1\t2\n' | boxtable
+dot	tool		this setup's map: what's wired to the repo; also adds aliases (dot alias) and opens the right file (dot edit)	dot; dot alias gl 'git log --oneline -20'; dot edit local
 awssetup	tool	hand-editing ~/.aws/config	one-time aws sso setup: a profile for every account + role	awssetup
 awslogin	function	export AWS_PROFILE=...	pick an aws profile for this shell, logs in only if expired	awslogin; awslogin dev-readonly
 awsme	alias		which aws account + role you're using right now	
@@ -59,3 +60,4 @@ gap	alias		stage chunk by chunk: y yes, n no, q stop	gap
 gbl	alias		who last changed each line	gbl file.py
 sbs	alias		delta side by side for one command, in front of any diff alias	sbs gds; sbs gdm
 lg	alias		git in a terminal window: files on the left, diff on the right, stage lines, commit, push	lg; | switches side by side
+cl	alias		clear	

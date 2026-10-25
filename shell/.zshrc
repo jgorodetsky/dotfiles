@@ -34,7 +34,7 @@ alias gbl='git blame'
 # sbs <diff alias> - delta side by side for one command: sbs gds, sbs gdm. the trailing space
 # lets the alias after it expand
 alias sbs='DELTA_FEATURES=+side-by-side '
-alias p='python3'
+alias p3='python3'
 alias pwdc='pwd | pbcopy'
 
 # gdm - everything this branch changed vs main (or master), what the PR will show
@@ -212,6 +212,9 @@ _bp="${HOMEBREW_PREFIX:-/opt/homebrew}/share"
 
 # ghostty tabs: "<status> <icon> <name>" titles by rule, tn to rename (does nothing outside ghostty)
 [ -f "$DOTFILES_SHELL/tabs.zsh" ] && source "$DOTFILES_SHELL/tabs.zsh"
+
+# aliases added with dot alias
+alias cl='clear'
 
 # machine-specific config, loaded after everything above so it wins
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
