@@ -254,7 +254,8 @@ so one copy works in every harness. `install.sh` copies them to:
 |-------|--------------|
 | `interactive-diagram` | Builds a self-contained interactive HTML diagram of any system: nested boundaries, status colors, numbered flows, pan/zoom, drill-down and a detail panel |
 | `grill-me` | Interviews you one question at a time about a plan or design and saves every answer to `brainstorms/` |
-| `laymans` | Explains a concept in plain language with small ASCII diagrams and comparison tables |
+| `laymans` | Teaches a concept the Feynman way: plain language, ASCII diagrams and comparison tables, or a coach mode where you explain it back and it finds the holes |
+| `feymans` | Explains anything the way Feynman would: mechanism before name, one honest analogy, a ladder from beginner to specialist (MIT, from guicortei/feynman-technique) |
 
 In Claude Code, run `/<skill> [what you want]`, e.g. `/interactive-diagram our ingest pipeline`.
 With nothing after it, the skill works from the current conversation. Other harnesses pick a
