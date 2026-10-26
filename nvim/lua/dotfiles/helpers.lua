@@ -15,8 +15,8 @@ local function clear_backgrounds()
 end
 
 -- tables with a "status" column get their rows colored by it, like the tab dots:
--- keep green, later yellow, dropped red (trials.tsv uses this)
-local status_colors = { keep = "DiagnosticOk", later = "DiagnosticWarn", dropped = "DiagnosticError" }
+-- keep green, next blue, later yellow, dropped red (trials.tsv uses this)
+local status_colors = { keep = "DiagnosticOk", next = "DiagnosticInfo", later = "DiagnosticWarn", dropped = "DiagnosticError" }
 local status_ns = vim.api.nvim_create_namespace("dotfiles_status")
 
 local function color_status(buf)

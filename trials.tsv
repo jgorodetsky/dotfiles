@@ -10,8 +10,8 @@
 09	worktrunk (wt)	tree		brew, zshrc	create and clean up worktrees
 10	workmux	tree	dropped	brew (needs 01)	one command: branch+window+agent
 11	treehouse	tree		tbd	reusable pool of worktrees
-12	firstmate	tree		git clone	agent that manages other agents
-13	atuin	shell		brew, zshrc, ctrl-r	every command in a searchable db
+12	firstmate	tree	dropped	git clone	agent that manages other agents
+13	atuin	shell	next	brew, zshrc, ctrl-r	every command in a searchable db
 14	television (tv)	shell		brew, zshrc	fzf with ready-made lists
 15	nushell	shell		brew	shell where output is a table
 16	neovim + lazyvim	editor	keep	brew, nvim/ -> ~/.config/nvim	editor, tables via trials (kickstart lost)
@@ -22,17 +22,17 @@
 21	mise	env		brew, zshrc	per-folder tool versions + env vars
 22	direnv	env		brew, zshrc	env vars only, skip if mise kept
 23	AGENTS.md symlink	agent		agent config dirs	one rules file all agents read
-24	kun's memory rules	agent		~/.claude/CLAUDE.md	his 9 global AGENTS.md rules
+24	kun's memory rules	agent	next	~/.claude/CLAUDE.md	his 9 global AGENTS.md rules
 25	ASD-STE100	agent		~/.claude/CLAUDE.md	plain-english rules for agents
-26	pi (proper try)	agent		~/.pi	minimal agent, plugins you pick
+26	pi (proper try)	agent	next	~/.pi	minimal agent, plugins you pick
 27	/goal	agent		none, built in	agent works until a goal is met
-28	npx skills	agent		node, ~/.agents/skills	skill installer for every agent
-29	opensuperwhisper	agent		mac app	hold a key, talk, typed locally
-30	gh-axi	agent		tbd	gh rebuilt for agents, fewer tokens
+28	npx skills	agent	next	node, ~/.agents/skills	skill installer for every agent
+29	opensuperwhisper	agent	next	mac app	hold a key, talk, typed locally (maybe)
+30	gh-axi	agent	next	tbd	gh rebuilt for agents, fewer tokens
 31	chrome-devtools-axi	agent		tbd	browser control, fewer tokens
-32	lavish	agent		skill, tbd	plans as a clickable web page
-33	no-mistakes	agent		tbd	review, test, PR, watch CI for you
-34	gnhf	agent		tbd	overnight agent loop with caps
+32	lavish	agent	next	skill, tbd	plans as a clickable web page
+33	no-mistakes	agent	next	tbd	review, test, PR, watch CI for you
+34	gnhf	agent	dropped	tbd	overnight agent loop with caps
 35	ghostty tab rules	term	keep	shell/tabs.zsh, ghostty/tabs.conf	emoji status + icons by rule (tab-demo)
 36	OPINIONS.md	agent		dotfiles, on demand	your views, for judgment calls
 37	VOICE.md	agent		dotfiles, on demand	how you sound when it writes as you
