@@ -403,7 +403,7 @@ does(){ case "$1" in
   ghostty-tabs)  echo "adds a block to Ghostty's config that loads the tab title rules (backup first)" ;;
   nvim)   echo "points ~/.config/nvim at the repo's editor setup (your own config is kept as a backup)" ;;
   skills) echo "installs the skills with npx skills: one copy in ~/.agents/skills (codex, opencode, copilot, pi, cursor, gemini read it), a link in ~/.claude/skills. private ones come from ~/engine/skills. for a copy you edited it asks: keep yours, take the source, or merge in nv" ;;
-  rules)  echo "links agents/AGENTS.md into every agent tool here: an @import line in ~/.claude/CLAUDE.md (your own lines stay), links for codex, pi and copilot. a tool with rules of its own: keep, replace or merge in nv" ;;
+  rules)  echo "links agents/AGENTS.md into every agent tool here: an @import line in ~/.claude/CLAUDE.md (your own lines stay), links for codex, pi, copilot and opencode. a tool with rules of its own: keep, replace or merge in nv" ;;
   macos)  echo "sets key repeat, file extensions, screenshots folder, cmd+1 app shortcuts, window tiling keys" ;;
   claude) echo "installs Claude Code with its own installer (it updates itself after that)" ;;
   aws)    echo "runs awssetup: asks a few questions, opens the browser to log in, writes a profile per account" ;;

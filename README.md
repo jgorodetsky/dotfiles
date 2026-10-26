@@ -50,7 +50,7 @@ Safe to re-run and safe to `git pull` over an existing setup.
 | `ghostty-tabs` | Appends a marked block to your Ghostty config that loads `ghostty/tabs.conf`. Same re-pointing rule as `shell`. |
 | `nvim` | Links `~/.config/nvim` to `nvim/`. An existing `~/.config/nvim` of your own is kept as `~/.config/nvim.bak-<timestamp>`. |
 | `skills` | Installs the skills with `npx skills@1.7.4` (telemetry off): one copy in `~/.agents/skills` and a link to it in `~/.claude/skills`. npx skills overwrites without asking, so dot checks first: each install is recorded in `~/.cache/dotfiles/skills.sync`, so it can tell a repo update (installed on its own) from your edits to an installed copy (it asks: keep yours, take the source, or merge in nv). Skills that fail the spec check aren't installed. A copy it replaces is saved in `~/.cache/dotfiles/skills-bak-<timestamp>` first, outside the skill folders so it doesn't load as a second skill. |
-| `rules` | Appends a marked block with `@<repo>/agents/AGENTS.md` to `~/.claude/CLAUDE.md` (your own lines stay), and links `~/.codex/AGENTS.md`, `~/.pi/agent/AGENTS.md` and `~/.copilot/copilot-instructions.md` to `agents/AGENTS.md` for the tools that are installed. A tool with a file of its own asks: keep it, replace it (saved to `~/.cache/dotfiles/rules-bak-<timestamp>`), or merge in nv. OpenCode isn't linked yet: with no file of its own it reads `~/.claude/CLAUDE.md`. |
+| `rules` | Appends a marked block with `@<repo>/agents/AGENTS.md` to `~/.claude/CLAUDE.md` (your own lines stay), and links `~/.codex/AGENTS.md`, `~/.pi/agent/AGENTS.md`, `~/.copilot/copilot-instructions.md` and `~/.config/opencode/AGENTS.md` to `agents/AGENTS.md` for the tools that are installed. A tool with a file of its own asks: keep it, replace it (saved to `~/.cache/dotfiles/rules-bak-<timestamp>`), or merge in nv. |
 | `macos` | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
 | `aws` | Runs `awssetup`, which writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
@@ -243,6 +243,7 @@ pins a fixed title instead. Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, a
 | `generator/` | re-renders the ChessKing board image |
 | `agents/skills/` | AI agent skills (below) |
 | `agents/AGENTS.md` | the rules every agent tool reads (below) |
+| `agents/docs/` | rules an agent reads only for some tasks: git, Terraform, tools, skills, long answers |
 
 Shell and git config are sourced/included from the repo, so editing a file here takes effect
 in the next terminal.
@@ -277,11 +278,15 @@ Every skill follows the spec, is written with Anthropic's skill-creator, and pas
 
 ## Agent rules
 
-`agents/AGENTS.md` holds the rules every agent tool follows: the skill process above, and how
-to use lavish for review pages. `dot fix` (the `rules` item) connects it: an `@import` line in
-`~/.claude/CLAUDE.md` for Claude Code, and links for Codex, pi and Copilot. Change it with
-`dot edit rules`; every tool sees the change in its next session. Private rules go in
-`~/engine/RULES.md`, which AGENTS.md points to, never in this repo.
+`agents/AGENTS.md` is a short router that every agent tool loads in every session: how to
+answer, how to work, and a "Read when" table that points to `agents/docs/` for rules that only
+some tasks need (git, Terraform, tools, skills, long answers). Tone stays in AGENTS.md itself,
+since an agent opens a routed file only when it decides to.
+
+`dot fix` (the `rules` item) connects it: an `@import` line in `~/.claude/CLAUDE.md` for Claude
+Code, and links for Codex, pi, Copilot and OpenCode. Change it with `dot edit rules`; every tool
+sees the change in its next session. Agent-facing text is written in STE-flavored English and
+checked with the `asd-ste100` skill's linter.
 
 ## Git identity
 

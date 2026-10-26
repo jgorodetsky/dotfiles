@@ -178,8 +178,8 @@ sk_apply(){ local k n s src i t out names agents bak n_ok=0 kept="" bad="" off="
   if [ "$n_ok" = 0 ]; then echo "nothing new to install"; else echo "$n_ok installed with npx skills"; fi; }
 
 # the global rules: one AGENTS.md in the repo for every agent tool. claude gets an @import line in
-# ~/.claude/CLAUDE.md (your own lines there stay); codex, pi and copilot get a link. opencode is
-# left out for now: a file of its own would stop it reading ~/.claude/CLAUDE.md
+# ~/.claude/CLAUDE.md (your own lines there stay); codex, pi, copilot and opencode get a link.
+# with no file of its own opencode reads ~/.claude/CLAUDE.md, where the @import stays plain text
 RL_SRC="$DIR/agents/AGENTS.md"
 RL_START="<!-- >>> dotfiles >>> -->"; RL_END="<!-- <<< dotfiles <<< -->"
 rl_targets(){
@@ -187,6 +187,7 @@ rl_targets(){
   { [ -d "${CODEX_HOME:-$HOME/.codex}" ] || command -v codex >/dev/null 2>&1; } && printf 'codex\t%s\n' "${CODEX_HOME:-$HOME/.codex}/AGENTS.md"
   { [ -d "$HOME/.pi" ] || command -v pi >/dev/null 2>&1; } && printf 'pi\t%s\n' "$HOME/.pi/agent/AGENTS.md"
   { [ -d "$HOME/.copilot" ] || command -v copilot >/dev/null 2>&1; } && printf 'copilot\t%s\n' "$HOME/.copilot/copilot-instructions.md"
+  { [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/opencode" ] || command -v opencode >/dev/null 2>&1; } && printf 'opencode\t%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/AGENTS.md"
   return 0; }
 # RL_T tool, RL_F file, RL_ST: ok · new (nothing there) · relink (points at another checkout) · yours
 RL_T=(); RL_F=(); RL_ST=(); RL_DO=()
