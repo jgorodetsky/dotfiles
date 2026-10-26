@@ -1,0 +1,7 @@
+SKILL.md is Jake's own, with explain-mode rules and coach mode adapted from guicortei/feynman-technique.
+references/ladder.md, analogies.md, failure-modes.md and evidence.md are copied unchanged from
+https://github.com/guicortei/feynman-technique @ 7905e9b1a2301896e72c04ebe12ffcc26ac25bb8 (2026-07-31),
+by way of the feymans skill, which was merged into laymans and removed on 2026-10-26.
+not copied: voice.md, other-languages.md, sources.md, assets/ (they clash with the user's rules:
+long sentences, no emoji, a 5-level answer shape)
+MIT, see LICENSE-feynman-technique

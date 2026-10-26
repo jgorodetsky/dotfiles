@@ -1,6 +1,6 @@
 ---
 name: laymans
-description: Teach a concept the Feynman way. Explain mode (default) gives plain language, mechanism before name, small ASCII diagrams, one honest analogy with its limits, and comparison tables. Coach mode flips it - the user explains the concept back and you find the holes one at a time. Use when the user asks for a layman's, plain-language or simpler explanation, didn't understand an answer, wants to be taught something, or asks to be quizzed, coached, tested, or to explain or "Feynman" a topic back.
+description: "Teach a concept the Feynman way, so the user can explain it back afterward. Explain mode (default) gives plain language, mechanism before name, small ASCII diagrams, one honest analogy with its limits, a ladder from plain words to edge cases, and comparison tables. Coach mode flips it - the user explains the concept back and you find the holes one at a time. Use it whenever the user asks for a layman's, plain-language, simpler or beginner explanation, says 'explain it like Feynman' or 'explain this properly', didn't understand an answer, wants to be taught something, or asks you to unpack or rewrite an explanation. Also use it when they want to be quizzed, coached or tested, or to explain or 'Feynman' a topic back."
 ---
 
 Teach so the user could explain it themselves afterward. Two modes:
@@ -101,6 +101,8 @@ Naming a thing isn't explaining it. "It's a mutex" says nothing. Order: what you
 
 - Mark approximations with their range ("holds until X").
 - Separate how it works from why it works when only the first is known.
+- Separate what you derived from what you only assert.
+- Give the facts that would let the user judge the explanation wrong, not only the facts that make it land.
 - Say "I don't know" or "nobody knows" plainly when true.
 
 ### Check before sending
@@ -134,4 +136,17 @@ One question per turn. Name holes directly; don't soften them or pad a correct a
 - If the user pushes back or says they don't get it, find the rung they fell off, change the analogy (not the volume), and go one rung lower than feels necessary. Don't reword the same explanation
 - If something is actually simple, say so in one line and move on
 
-Explain-mode rules and coach mode adapted from [guicortei/feynman-technique](https://github.com/guicortei/feynman-technique) (MIT).
+## Going deeper
+
+Read a file only when the answer needs it. Do not load them all up front.
+
+| File | Read it when |
+|---|---|
+| `references/ladder.md` | a question has an odd shape (contested, mathematical, about one codebase) or you must decide how deep each rung goes |
+| `references/analogies.md` | you build an analogy or test where it breaks |
+| `references/failure-modes.md` | you check a draft, or the user asks you to rewrite an explanation |
+| `references/evidence.md` | the user asks why the method works, or where it fails |
+
+These files use 5 levels. Level 0 is rung 1 (Plain). Level 1 is rung 2 (Real names). Levels 2 and 3 are rung 3 (Tradeoffs and failure modes). Level 4 is rung 4 (Edge cases and limits). Use the 4 rungs above for the answer. When a file conflicts with the user's own rules (short sentences, emoji status marks), the user's rules win.
+
+Explain-mode rules and coach mode adapted from [guicortei/feynman-technique](https://github.com/guicortei/feynman-technique), and the files in `references/` copied from it (MIT, see `UPSTREAM`).
