@@ -491,7 +491,7 @@ cfg_step(){ local id="$1" t f old res n s d k bak
       # repoint an include left by another checkout of this repo (a worktree, an old clone), else add one
       old="$(git config --file "$GC" --get-all include.path 2>/dev/null | while IFS= read -r p; do
         [ "$p" != "$DIR/git/.gitconfig" ] && [ "${p%/git/.gitconfig}/git/.gitconfig" = "$p" ] &&
-          [ -f "${p%/git/.gitconfig}/install.sh" ] && echo "$p"; done | head -1)"
+          [ -f "${p%/git/.gitconfig}/install.sh" ] && echo "$p"; done | head -1 || true)"
       if grep -qsF "$DIR/git/.gitconfig" "$GC"; then :
       elif [ -n "$old" ]; then git config --file "$GC" --replace-all include.path "$DIR/git/.gitconfig" "^$old\$"
       else git config --file "$GC" --add include.path "$DIR/git/.gitconfig"; fi
@@ -614,7 +614,7 @@ install_step(){ local i id st pid tmp line LOG ok="" bad="" t
     ( cfg_step "$id" ) > "$LOG.one" 2>&1 & pid=$!
     while kill -0 "$pid" 2>/dev/null; do rows_draw; sleep 0.15; done
     if wait "$pid"; then st=ok; else st=fail; fi
-    t="$(grep -v '^note: ' "$LOG.one" | grep -v '^[[:space:]]*$' | tail -1 | sed "s|$HOME|~|g")"
+    t="$(grep -v '^note: ' "$LOG.one" | grep -v '^[[:space:]]*$' | tail -1 | sed "s|$HOME|~|g" || true)"
     [ "$st" = fail ] && t="failed, see the log"
     row_set "$id" "$st" "${t:-done}"; row_print "$id"
     while IFS= read -r line; do RECEIPT+=("  ${D}${line/#note: /note: }${X}"); done < <(grep '^note: ' "$LOG.one" | sed "s|$HOME|~|g")
