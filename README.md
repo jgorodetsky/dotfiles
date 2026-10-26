@@ -1,7 +1,7 @@
 # dotfiles
 
 My macOS setup: shell, git, Homebrew packages, Ghostty terminal themes and tabs, Neovim, and AI agent skills
-that work in Claude Code, Codex, Cursor, Gemini CLI, OpenCode and GitHub Copilot.
+that work in Claude Code, Codex, Cursor, Gemini CLI, OpenCode, GitHub Copilot and pi.
 
 `./install.sh` (later: `dot fix`) checks what's already set up, sorts the lines your shell files
 already have, and installs what's missing. It never replaces your existing files. See
@@ -45,11 +45,12 @@ Safe to re-run and safe to `git pull` over an existing setup.
 | Feature | What it does to your machine |
 |---------|------------------------------|
 | `shell` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files, and never adds it twice. Lines you already had are shown grouped by where they'd go, and you pick: **merge** (ones the repo already does are deleted, yours move to `~/.zshrc.local`, an alias the repo has under another name or a clash asks you), **keep** the file as it is, or **overwrite** (loader only; your lines stay in the backup). Before writing it loads your shell both ways and shows anything that would behave differently. Backups are `.bak-<timestamp>`. Re-running from another checkout (a worktree, say) points the block at that checkout. Older installs that symlinked these files get your original file back first. |
-| `git` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. |
+| `git` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. Adds the lines in `git/ignore` (`.lavish/`, `.playwright-mcp/`) that your global ignore file (`~/.config/git/ignore`, or your `core.excludesFile`) doesn't have yet, and keeps the rest. |
 | `ghostty-theme` | Appends a marked block to your Ghostty config. If you already have a different theme file or `gtheme` with the same name, yours is kept as `<file>.bak-<timestamp>`. |
 | `ghostty-tabs` | Appends a marked block to your Ghostty config that loads `ghostty/tabs.conf`. Same re-pointing rule as `shell`. |
 | `nvim` | Links `~/.config/nvim` to `nvim/`. An existing `~/.config/nvim` of your own is kept as `~/.config/nvim.bak-<timestamp>`. |
-| `skills` | Adds skill folders to `~/.agents/skills` and `~/.claude/skills`. A copy you've changed (or one that came from another checkout) is only replaced if you say so: keep all of yours, overwrite all, or choose each one. Replaced copies are saved in `~/.cache/dotfiles/`, outside the skill folders so they don't load as a second skill. |
+| `skills` | Installs the skills with `npx skills@1.7.4` (telemetry off): one copy in `~/.agents/skills` and a link to it in `~/.claude/skills`. npx skills overwrites without asking, so dot checks first: each install is recorded in `~/.cache/dotfiles/skills.sync`, so it can tell a repo update (installed on its own) from your edits to an installed copy (it asks: keep yours, take the source, or merge in nv). Skills that fail the spec check aren't installed. A copy it replaces is saved in `~/.cache/dotfiles/skills-bak-<timestamp>` first, outside the skill folders so it doesn't load as a second skill. |
+| `rules` | Appends a marked block with `@<repo>/agents/AGENTS.md` to `~/.claude/CLAUDE.md` (your own lines stay), and links `~/.codex/AGENTS.md`, `~/.pi/agent/AGENTS.md` and `~/.copilot/copilot-instructions.md` to `agents/AGENTS.md` for the tools that are installed. A tool with a file of its own asks: keep it, replace it (saved to `~/.cache/dotfiles/rules-bak-<timestamp>`), or merge in nv. OpenCode isn't linked yet: with no file of its own it reads `~/.claude/CLAUDE.md`. |
 | `macos` | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
 | `aws` | Runs `awssetup`, which writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
@@ -94,7 +95,7 @@ next `./install.sh` shows them under `shell` and sorts them the same way.
 - `dot alias -d NAME` - remove an alias. It finds every file that sets it and asks where: one of
   those files, all of them, or (for one the repo sets) only on this Mac, which adds an `unalias`
   line to `~/.zshrc.local` and leaves the repo alone
-- `dot edit [shell|local|profile|git|brew|mine|nvim|ghostty]` - open the file you'd change
+- `dot edit [shell|local|profile|git|brew|mine|nvim|ghostty|rules|skills]` - open the file you'd change
 - `dot update` - `git pull --ff-only`, then `dot fix`
 
 If the machine already has an oh-my-zsh theme or powerlevel10k, the starship prompt is skipped,
@@ -232,36 +233,55 @@ pins a fixed title instead. Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, a
 | `bin/awssetup` | AWS SSO profile generator (on PATH via `.zprofile`) |
 | `bin/mine-table`, `shell/mine.tsv` | the engine behind `mine`, and the tools/keys/notes it adds to your aliases and functions |
 | `bin/boxtable` | draws tab-separated text as a boxed table (used by mine and alias) |
+| `bin/lavish-theme` | prints the `<head>` lines for a lavish page in Ghostty's colors (a DaisyUI theme) |
+| `lib/agents.sh` | the skills and rules steps: spec check, edit detection, npx skills, links |
+| `git/ignore` | lines added to your global git ignore file |
 | `git/.gitconfig` | git behavior only, no identity (see below); delta draws diffs |
 | `lazygit/config.yml` | lazygit settings: delta diffs, side by side on `\|` |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |
 | `generator/` | re-renders the ChessKing board image |
 | `agents/skills/` | AI agent skills (below) |
+| `agents/AGENTS.md` | the rules every agent tool reads (below) |
 
 Shell and git config are sourced/included from the repo, so editing a file here takes effect
 in the next terminal.
 
 ## Agent skills
 
-Skills use the open [Agent Skills](https://agentskills.io) format (a folder with a `SKILL.md`),
-so one copy works in every harness. `install.sh` copies them to:
+Skills use the open [Agent Skills](https://agentskills.io/specification) format (a folder with a
+`SKILL.md`), so one copy works in every harness. `dot fix` installs them with `npx skills`:
 
-- `~/.agents/skills` - Codex, Cursor, Gemini CLI, OpenCode, GitHub Copilot
-- `~/.claude/skills` - Claude Code
+- `~/.agents/skills` - the one real copy. Codex, OpenCode, GitHub Copilot, pi, Cursor and Gemini CLI read it here
+- `~/.claude/skills/<name>` - a link to it, for Claude Code
+
+Public skills live in `agents/skills/`. Private ones live in `~/engine/skills/` (outside this
+repo) and install the same way when that folder exists.
 
 | Skill | What it does |
 |-------|--------------|
-| `interactive-diagram` | Builds a self-contained interactive HTML diagram of any system: nested boundaries, status colors, numbered flows, pan/zoom, drill-down and a detail panel |
-| `grill-me` | Interviews you one question at a time about a plan or design and saves every answer to `brainstorms/` |
+| `interactive-diagram` | Builds a self-contained interactive HTML diagram of any system: nested boundaries, status colors, numbered flows, pan/zoom, drill-down and a detail panel. Add `review` to go over it in lavish, `sketch` for an editable whiteboard, `draw` to draw it yourself with coaching |
+| `grill-me` | Interviews you one question at a time about a plan or design and saves every answer to `brainstorms/`. Questions that don't depend on each other go on one lavish page, recommended answers already picked |
 | `laymans` | Teaches a concept the Feynman way: plain language, ASCII diagrams and comparison tables, or a coach mode where you explain it back and it finds the holes |
 | `feymans` | Explains anything the way Feynman would: mechanism before name, one honest analogy, a ladder from beginner to specialist (MIT, from guicortei/feynman-technique) |
+| `deepen` | Rewrites a request into the version a top professional would ask for, then stops |
+| `icm-architect` | Designs a process or body of knowledge as an ICM workspace, folder structure as agent architecture (MIT, by Jake Van Clief) |
 
 In Claude Code, run `/<skill> [what you want]`, e.g. `/interactive-diagram our ingest pipeline`.
 With nothing after it, the skill works from the current conversation. Other harnesses pick a
 skill up when you name it or when your request matches its description.
 
-Edit skills in `agents/skills/`, then run `./install.sh --only skills`.
+Every skill follows the spec, is written with Anthropic's skill-creator, and passes
+`uvx --from skills-ref==0.1.1 agentskills validate <folder>`. Edit them in `agents/skills/`
+(`dot edit skills`), then run `dot fix` (or `./install.sh --only skills`).
+
+## Agent rules
+
+`agents/AGENTS.md` holds the rules every agent tool follows: the skill process above, and how
+to use lavish for review pages. `dot fix` (the `rules` item) connects it: an `@import` line in
+`~/.claude/CLAUDE.md` for Claude Code, and links for Codex, pi and Copilot. Change it with
+`dot edit rules`; every tool sees the change in its next session. Private rules go in
+`~/engine/RULES.md`, which AGENTS.md points to, never in this repo.
 
 ## Git identity
 
