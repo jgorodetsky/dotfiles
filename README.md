@@ -266,6 +266,7 @@ repo) and install the same way when that folder exists.
 | `feymans` | Explains anything the way Feynman would: mechanism before name, one honest analogy, a ladder from beginner to specialist (MIT, from guicortei/feynman-technique) |
 | `deepen` | Rewrites a request into the version a top professional would ask for, then stops |
 | `icm-architect` | Designs a process or body of knowledge as an ICM workspace, folder structure as agent architecture (MIT, by Jake Van Clief) |
+| `asd-ste100` | Rewrites text an agent reads (rules files, skills, tool descriptions, error messages) into Simplified Technical English, with a linter for the structural rules (MIT, from danyuchn/asd-ste100-skill) |
 
 In Claude Code, run `/<skill> [what you want]`, e.g. `/interactive-diagram our ingest pipeline`.
 With nothing after it, the skill works from the current conversation. Other harnesses pick a
