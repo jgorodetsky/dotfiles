@@ -5,6 +5,7 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 . "$DIR/lib/ui.sh"
 . "$DIR/lib/upgrade.sh"
+. "$DIR/lib/agents.sh"
 t(){ printf '%s' "${1/#$HOME/~}"; }
 
 # code lines in a file: not blank, not a comment
@@ -49,11 +50,13 @@ wired(){ local f s n gc nv tabs ghc o i w col mk
   else wire bad "ghostty → tabs.conf" "not connected"; fi
   n=0; for f in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${f##*/}" ] || n=$((n + 1)); done
   if [ "$n" = 0 ]; then wire ok "ghostty themes (copied)"; else wire bad "ghostty themes (copied)" "$n missing"; fi
-  n=0; o=0; for s in "$DIR"/agents/skills/*/; do f="$(basename "$s")"
-    for i in "$HOME/.claude/skills" "$HOME/.agents/skills"; do
-      if [ ! -d "$i/$f" ]; then o=$((o + 1))
-      elif ! diff -rq -x __pycache__ -x .dotfiles "$s" "$i/$f" >/dev/null 2>&1; then n=$((n + 1)); fi; done; done
-  if [ "$o" = 0 ]; then wire ok "skills (copied)"; else wire bad "skills (copied)" "$o missing"; fi
+  sk_scan; sk_count; n=$((SKC_NEW + SKC_UPD + SKC_LINK))
+  if [ "$n" -gt 0 ]; then wire bad "skills (copied)" "$n to install"
+  elif [ $((SKC_MINE + SKC_BAD)) -gt 0 ]; then wire look "skills (copied)" "changed here:$SKC_MINE_N${SKC_BAD_N:+ · fail the spec:$SKC_BAD_N}"
+  else wire ok "skills (copied)" "${#SK_N[@]}, npx skills"; fi
+  rl_scan; n=""; o=""
+  for i in "${!RL_T[@]}"; do case "${RL_ST[$i]}" in ok) o="$o ${RL_T[$i]}" ;; *) n="$n ${RL_T[$i]}" ;; esac; done
+  if [ -z "$n" ]; then wire ok "rules → agents/AGENTS.md" "${o# }"; else wire look "rules → agents/AGENTS.md" "not for:$n"; fi
 
   printf '\n%swired up%s  %s→ follows the repo on every pull · copied: changes when dot fix runs%s\n' "$B" "$X" "$D" "$X"
   # two columns when there's room
@@ -100,7 +103,7 @@ usage(){ local w=$(( UI_W - 30 ))
   printf '\naliases\n';        h "dot alias NAME 'CMD'" "add one; asks: every machine or this Mac"
                                h "dot alias -d NAME" "remove one; asks where"
   printf '\nfiles\n';          h "dot edit [what]" "open the file you'd change"
-  printf '  %s%s%s\n' "$D" "$(cut_to "what: shell local profile git brew mine nvim ghostty" $((UI_W - 4)))" "$X"
+  printf '  %s%s%s\n' "$D" "$(cut_to "what: shell local profile git brew mine nvim ghostty rules skills" $((UI_W - 4)))" "$X"
   return 0; }
 
 # every alias the real shell has: name<TAB>command
@@ -219,12 +222,14 @@ edit(){ local f
     shell|zshrc) f="$DIR/shell/.zshrc" ;; profile|zprofile) f="$DIR/shell/.zprofile" ;;
     local) f="$HOME/.zshrc.local" ;; git) f="$DIR/git/.gitconfig" ;; brew) f="$DIR/Brewfile" ;;
     mine) f="$DIR/shell/mine.tsv" ;; nvim) f="$DIR/nvim" ;; ghostty|tabs) f="$DIR/ghostty/tabs.conf" ;;
+    rules) f="$DIR/agents/AGENTS.md" ;; skills) f="$DIR/agents/skills" ;;
     "") printf 'dot edit WHAT:\n'
         printf '  shell    %s  every machine, interactive shell\n' "$(t "$DIR/shell/.zshrc")"
         printf '  profile  %s  every machine, login (PATH, env)\n' "$(t "$DIR/shell/.zprofile")"
         printf '  local    ~/.zshrc.local  this Mac only, loads last\n'
         printf '  git      %s\n  brew     %s\n  mine     %s  notes for the mine table\n' "$(t "$DIR/git/.gitconfig")" "$(t "$DIR/Brewfile")" "$(t "$DIR/shell/mine.tsv")"
-        printf '  nvim     %s\n  ghostty  %s\n' "$(t "$DIR/nvim")" "$(t "$DIR/ghostty/tabs.conf")"; return 0 ;;
+        printf '  nvim     %s\n  ghostty  %s\n' "$(t "$DIR/nvim")" "$(t "$DIR/ghostty/tabs.conf")"
+        printf '  rules    %s  every agent tool reads it\n  skills   %s  then dot fix installs them\n' "$(t "$DIR/agents/AGENTS.md")" "$(t "$DIR/agents/skills")"; return 0 ;;
     *) echo "dot: don't know '$1'. try: dot edit" >&2; exit 2 ;;
   esac
   exec ${EDITOR:-vim} "$f"

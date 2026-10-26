@@ -1,0 +1,3 @@
+# ignored in every repo. install.sh adds the lines your global ignore file is missing
+.lavish/
+.playwright-mcp/

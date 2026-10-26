@@ -45,6 +45,13 @@ put_block(){
 # the screens: its own screen like vim, a step bar, arrow-key menus, spinner rows
 . "$DIR/lib/ui.sh"
 . "$DIR/lib/upgrade.sh"
+. "$DIR/lib/agents.sh"
+
+# the global git ignore file, and the lines from git/ignore it doesn't have yet
+gi_file(){ local f; f="$(git config --global --get core.excludesFile 2>/dev/null || true)"
+  [ -n "$f" ] || f="${XDG_CONFIG_HOME:-$HOME/.config}/git/ignore"; echo "${f/#\~/$HOME}"; }
+gi_missing(){ local f l; f="$(gi_file)"
+  grep -vE '^[[:space:]]*(#|$)' "$DIR/git/ignore" | while IFS= read -r l; do grep -qsxF "$l" "$f" || echo "$l"; done; }
 
 # what kind of machine this is (shown in the header; install choices will use it next)
 case "$(uname -s)" in
@@ -82,11 +89,12 @@ done < "$DIR/Brewfile"
 
 add_cfg(){ IDS+=("$1"); CLASSES+=(config); DESCS+=("$2"); KINDS+=(config); TARGETS+=("$1"); SPECS+=(""); }
 add_cfg shell   "loader line in ~/.zprofile + ~/.zshrc, sorts the other lines in them"
-add_cfg git     "include repo git config in ~/.gitconfig"
+add_cfg git     "include repo git config in ~/.gitconfig, global ignore lines"
 add_cfg ghostty-theme "ChessKing + cadillac themes + gtheme picker"
 add_cfg ghostty-tabs "tab titles by rule: status dot, emoji, name (shell/tabs.zsh + ghostty/tabs.conf)"
 add_cfg nvim    "neovim config (lazyvim): link ~/.config/nvim to nvim/"
-add_cfg skills  "agent skills -> ~/.agents/skills + ~/.claude/skills"
+add_cfg skills  "agent skills via npx skills: one copy in ~/.agents/skills, a link for claude"
+add_cfg rules   "one AGENTS.md for every agent tool (claude, codex, pi, copilot)"
 add_cfg macos   "key repeat, file extensions, screenshots, cmd+1 apps, ctrl+opt+arrow tiling"
 add_cfg claude  "claude code, native install (auto-updates itself)"
 add_cfg aws     "aws sso: one login, a profile for every account you can reach (awssetup)"
@@ -141,7 +149,10 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 not (sets STATE missing|els
                  case "$MODE" in pick) f="next step" ;; all) f="merged next" ;; *) f="dot fix" ;; esac
                  [ "$SORT_N" -gt 0 ] && { set_state sort "$SORT_N lines in${SORT_FILES// / ~/} to sort" "$f"; return 1; }
                  WHERE="~/.zprofile + ~/.zshrc [dotfiles block, nothing else]" ;;
-        git)     grep -qsF "$DIR/git/.gitconfig" "$HOME/.gitconfig" && { WHERE="$HOME/.gitconfig [include]"; return 0; }
+        git)     if grep -qsF "$DIR/git/.gitconfig" "$HOME/.gitconfig"; then
+                   m="$(gi_missing | tr '\n' ' ')"
+                   [ -n "$m" ] && { set_state update "global ignore file lacks: $m" "add them"; return 1; }
+                   WHERE="$HOME/.gitconfig [include] + $(gi_file | sed "s|^$HOME|~|")"; return 0; fi
                  o="$(git config --file "$HOME/.gitconfig" --get-all include.path 2>/dev/null | while IFS= read -r p; do other_checkout "$p" /git/.gitconfig; done | head -1)"
                  [ -n "$o" ] && { set_state elsewhere "set up from $o, not this folder" "switch here"; return 1; }
                  set_state missing "not set up" "set up"; return 1 ;;
@@ -160,18 +171,24 @@ detect(){ # $1 index -> 0 installed (sets WHERE) / 1 not (sets STATE missing|els
                  WHERE="~/.config/nvim -> $DIR/nvim" ;;
         ghostty-theme) for t in "$DIR"/ghostty/themes/*; do [ -f "$HOME/.config/ghostty/themes/${t##*/}" ] || { set_state missing "themes not copied" "copy them"; return 1; }; done
                        WHERE="$HOME/.config/ghostty/themes ($(ls "$DIR/ghostty/themes" | wc -l | tr -d ' ') themes)" ;;
-        skills)  n=0; m=0; o=""; for s in "$DIR"/agents/skills/*/; do for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
-                   f="$(basename "$s")"
-                   if [ ! -d "$t/$f" ]; then m=$((m + 1))
-                   elif ! diff -rq -x __pycache__ -x .dotfiles "$s" "$t/$f" >/dev/null 2>&1; then n=$((n + 1))
-                     # an installed copy that matches another checkout (say uncommitted edits in ~/dotfiles)
-                     for p in $(git -C "$DIR" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p'); do
-                       [ "$p" != "$DIR" ] && diff -rq -x __pycache__ -x .dotfiles "$p/agents/skills/$f" "$t/$f" >/dev/null 2>&1 && o="${p/#$HOME/~}"; done
-                   fi; done; done
-                 [ "$n" -gt 0 ] && [ -n "$o" ] && { set_state differs "$n cop$([ "$n" = 1 ] && echo y || echo ies) match $o (yours)" "fine to leave"; return 1; }
-                 [ "$n" -gt 0 ] && { set_state differs "$n installed cop$([ "$n" = 1 ] && echo y || echo ies) differ from the repo" "yours, kept"; return 1; }
-                 [ "$m" -gt 0 ] && { set_state missing "$m not installed" install; return 1; }
-                 WHERE="~/.agents/skills + ~/.claude/skills ($(ls "$DIR/agents/skills" | wc -l | tr -d ' ') skills)" ;;
+        skills)  sk_scan; sk_count; m=""; n=""
+                 [ "$SKC_MINE" -gt 0 ] && m="$m, $SKC_MINE changed here:$SKC_MINE_N"
+                 [ "$SKC_BAD" -gt 0 ] && m="$m, $SKC_BAD fail the spec check:$SKC_BAD_N"
+                 [ "$SKC_NEW" -gt 0 ] && n="$SKC_NEW not installed"
+                 [ "$SKC_UPD" -gt 0 ] && n="${n:+$n, }$SKC_UPD changed in the source"
+                 [ "$SKC_LINK" -gt 0 ] && n="${n:+$n, }$SKC_LINK to switch to npx skills"
+                 if [ -n "$n" ]; then
+                   if [ $((SKC_UPD + SKC_LINK)) = 0 ]; then set_state missing "$n$m" install; else set_state update "$n$m" update; fi
+                   return 1; fi
+                 [ "$SKC_BAD" -gt 0 ] && { set_state differs "${m#, }" "fix SKILL.md"; return 1; }
+                 [ "$SKC_MINE" -gt 0 ] && { set_state differs "${m#, }" "yours, kept"; return 1; }
+                 WHERE="~/.agents/skills, linked in ~/.claude/skills (${#SK_N[@]} skills, npx skills)" ;;
+        rules)   rl_scan; n=""; m=""
+                 [ "${#RL_T[@]}" -gt 0 ] || { WHERE="no agent tools found"; return 0; }
+                 for f in "${!RL_T[@]}"; do case "${RL_ST[$f]}" in new|relink) n="$n ${RL_T[$f]}" ;; yours) m="$m ${RL_T[$f]}" ;; esac; done
+                 [ -n "$n" ] && { set_state missing "not linked for$n${m:+, rules of their own:$m}" link; return 1; }
+                 [ -n "$m" ] && { set_state differs "rules of their own:$m" "yours, kept"; return 1; }
+                 WHERE="agents/AGENTS.md, read by$(printf ' %s' "${RL_T[@]}")" ;;
         macos)   { [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] &&
                    [ "$(defaults export com.apple.symbolichotkeys - 2>/dev/null | plutil -extract AppleSymbolicHotKeys.160.value.parameters json -o - - 2>/dev/null)" = "[49,18,1048576]" ] &&
                    [ "$(defaults export com.apple.symbolichotkeys - 2>/dev/null | plutil -extract AppleSymbolicHotKeys.240.value.parameters json -o - - 2>/dev/null)" = "[65535,123,9175040]" ]; } ||
@@ -381,11 +398,12 @@ shell_step(){ local step=$1 f plan nd nm na tot n k s dg nt l t w pre="the repo'
 # what picking each item does (the full list's panel)
 does(){ case "$1" in
   shell)  echo "adds the loader line to ~/.zprofile and ~/.zshrc, then sorts any other lines in them (you see every change and confirm first)" ;;
-  git)    echo "adds one include line to ~/.gitconfig that loads the repo's git settings (delta, aliases, credentials)" ;;
+  git)    echo "adds one include line to ~/.gitconfig that loads the repo's git settings (delta, aliases, credentials), and adds git/ignore's lines to your global ignore file" ;;
   ghostty-theme) echo "copies the themes into ~/.config/ghostty/themes and the gtheme picker" ;;
   ghostty-tabs)  echo "adds a block to Ghostty's config that loads the tab title rules (backup first)" ;;
   nvim)   echo "points ~/.config/nvim at the repo's editor setup (your own config is kept as a backup)" ;;
-  skills) echo "copies the agent skills into ~/.agents/skills and ~/.claude/skills. for ones you've changed it asks first: keep yours, overwrite all, or choose each" ;;
+  skills) echo "installs the skills with npx skills: one copy in ~/.agents/skills (codex, opencode, copilot, pi, cursor, gemini read it), a link in ~/.claude/skills. private ones come from ~/engine/skills. for a copy you edited it asks: keep yours, take the source, or merge in nv" ;;
+  rules)  echo "links agents/AGENTS.md into every agent tool here: an @import line in ~/.claude/CLAUDE.md (your own lines stay), links for codex, pi and copilot. a tool with rules of its own: keep, replace or merge in nv" ;;
   macos)  echo "sets key repeat, file extensions, screenshots folder, cmd+1 app shortcuts, window tiling keys" ;;
   claude) echo "installs Claude Code with its own installer (it updates itself after that)" ;;
   aws)    echo "runs awssetup: asks a few questions, opens the browser to log in, writes a profile per account" ;;
@@ -498,6 +516,11 @@ cfg_step(){ local id="$1" t f old res n s d k bak
       [ -z "$(git config --get user.email 2>/dev/null || true)" ] && \
         echo "note: set your git identity: git config --global user.name '...' && git config --global user.email '...'"
       command -v gh >/dev/null && ! gh auth status >/dev/null 2>&1 && echo "note: log in to github (browser, token goes in keychain): gh auth login"
+      # ignored in every repo: add the lines the global ignore file doesn't have, keep the rest
+      f="$(gi_file)"; old="$(gi_missing)"
+      if [ -n "$old" ]; then mkdir -p "$(dirname "$f")"; touch "$f"
+        [ -s "$f" ] && [ -n "$(tail -c1 "$f")" ] && echo >> "$f"
+        printf '%s\n' "$old" >> "$f"; echo "note: added to ${f/#$HOME/~}: $(echo $old)"; fi
       echo "~/.gitconfig includes git/.gitconfig" ;;
     ghostty-theme) [ -x "$DIR/ghostty/install.sh" ] && "$DIR/ghostty/install.sh"
       echo "$(ls "$DIR/ghostty/themes" | wc -l | tr -d ' ') themes + gtheme copied" ;;
@@ -517,27 +540,11 @@ cfg_step(){ local id="$1" t f old res n s d k bak
       else echo "note: nvim isn't installed yet: ./install.sh --only neovim"; fi
       echo "~/.config/nvim linked, plugins pinned" ;;
     skills)
-      n=0; k=""; bak="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/skills-bak-$STAMP"
-      for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do mkdir -p "$t"
-        for s in "$DIR"/agents/skills/*/; do f="$(basename "$s")"; d="$t/$f"
-          if [ -d "$d" ] && diff -rq -x __pycache__ -x .dotfiles "$s" "$d" >/dev/null 2>&1; then touch "$d/.dotfiles"; continue; fi
-          if [ -d "$d" ]; then
-            # a copy you changed: only replaced when you said so, and saved first (outside the skill
-            # folders, so the tools don't load the old copy as a second skill)
-            case " $SKILL_OVER " in
-              *" $f "*) mkdir -p "$bak/${t##*/.}"; cp -R "$d" "$bak/${t##*/.}/$f" ;;
-              *) case " $k " in *" $f "*) ;; *) k="$k $f" ;; esac; continue ;;
-            esac
-          fi
-          rsync -a --delete --exclude __pycache__ --exclude .dotfiles "$s" "$d/"; touch "$d/.dotfiles"; n=$((n + 1))
-        done
+      for s in ${SK_N[@]+"${SK_N[@]}"}; do
+        [ -f "$HOME/.claude/commands/$s.md" ] && echo "note: ~/.claude/commands/$s.md is an older slash command with the same name as a skill"
       done
-      [ -n "$k" ] && echo "note: kept yours:$k"
-      [ -d "$bak" ] && echo "note: the skills you replaced are saved in ${bak/#$HOME/~}"
-      for s in "$DIR"/agents/skills/*/; do d="$(basename "$s")"
-        [ -f "$HOME/.claude/commands/$d.md" ] && echo "note: ~/.claude/commands/$d.md is an older slash command with the same name as a skill"
-      done
-      if [ "$n" = 0 ]; then echo "nothing new to copy"; else echo "$n skill copies updated"; fi ;;
+      sk_apply ;;
+    rules) rl_apply ;;
     macos)   bash "$DIR/macos/defaults.sh"; echo "settings applied" ;;
     claude)
       if command -v claude >/dev/null; then echo "already installed: $(command -v claude)"
@@ -546,30 +553,6 @@ cfg_step(){ local id="$1" t f old res n s d k bak
       if [ -t 0 ] && [ -t 1 ]; then "$DIR/bin/awssetup" || { echo "note: awssetup didn't finish; run it again any time: awssetup"; return 1; }
       else echo "note: aws needs a terminal (it asks questions and opens a browser). run later: awssetup"; fi
       echo "profiles written" ;;
-  esac
-  return 0; }
-
-# skills you changed (or that came from another checkout) are only replaced if you say so
-SKILL_OVER=""
-skills_ask(){ local s f t o w names="" where="" i
-  local -a chg=()
-  for s in "$DIR"/agents/skills/*/; do f="$(basename "$s")"
-    for t in "$HOME/.agents/skills" "$HOME/.claude/skills"; do
-      [ -d "$t/$f" ] && ! diff -rq -x __pycache__ -x .dotfiles "$s" "$t/$f" >/dev/null 2>&1 && { chg+=("$f"); break; }; done; done
-  [ "${#chg[@]}" -gt 0 ] || return 0
-  # where yours came from: another checkout of this repo, or edited after install
-  for f in "${chg[@]}"; do names="$names, $f"
-    for o in $(git -C "$DIR" worktree list --porcelain 2>/dev/null | sed -n 's/^worktree //p'); do
-      [ "$o" != "$DIR" ] && diff -rq -x __pycache__ -x .dotfiles "$o/agents/skills/$f" "$HOME/.claude/skills/$f" >/dev/null 2>&1 && where="${o/#$HOME/~}"; done; done
-  [ -n "$where" ] && w="yours came from $where" || w="yours were changed after they were installed"
-  ui_menu "${#chg[@]} installed skills differ from this folder's copies: ${names#, }"$'\n'"$w" 0 \
-    "Keep all of mine|recommended; only missing skills get copied" "Overwrite all|with this folder's copies; yours saved to ~/.cache/dotfiles" "Choose each one|"
-  case "$UI_PICK" in
-    1) SKILL_OVER="${chg[*]}" ;;
-    2) for f in "${chg[@]}"; do
-         ui_menu "$f"$'\n'"$(diff -r -x __pycache__ -x .dotfiles "$HOME/.claude/skills/$f" "$DIR/agents/skills/$f" 2>/dev/null | grep -c '^[<>]' || true) lines differ" 0 "Keep mine|$(sed -n 's/^description: *//p' "$HOME/.claude/skills/$f/SKILL.md" 2>/dev/null | head -1)" \
-           "Use this folder's|$(sed -n 's/^description: *//p' "$DIR/agents/skills/$f/SKILL.md" | head -1)"
-         [ "$UI_PICK" = 1 ] && SKILL_OVER="$SKILL_OVER $f"; done ;;
   esac
   return 0; }
 
@@ -582,7 +565,8 @@ install_step(){ local i id st pid tmp line LOG ok="" bad="" t
       # aws asks questions in the terminal, so it runs last, in the open
       if [ "${IDS[$i]}" = aws ]; then talk+=("$i"); else cfg+=("$i"); fi
     else pkg+=("$i"); fi; done
-  for i in ${cfg[@]+"${cfg[@]}"}; do [ "${IDS[$i]}" = skills ] && skills_ask; done
+  # questions first (skills or rules you edited), so the install rows run without stopping
+  for i in ${cfg[@]+"${cfg[@]}"}; do case "${IDS[$i]}" in skills) sk_ask ;; rules) rl_ask ;; esac; done
   for i in ${pkg[@]+"${pkg[@]}"} ${cfg[@]+"${cfg[@]}"} ${talk[@]+"${talk[@]}"}; do row_add "${IDS[$i]}" "queued"; done
   [ "$UI_TTY" = 1 ] || printf '\n%sinstalling%s  %sfull output: %s%s\n' "$B" "$X" "$D" "${LOG/#$HOME/~}" "$X"
   rows_draw

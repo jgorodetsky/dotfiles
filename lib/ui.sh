@@ -29,7 +29,9 @@ ui_quit(){ RECEIPT+=("  ${D}stopped here; nothing after this point was changed.$
   type receipt_head >/dev/null 2>&1 && receipt_head; exit 1; }
 
 # the frame on top of every step: header, ✓ done ━━ ● now ━━ ○ next, a rule
+UI_CUR=1
 ui_frame(){ local cur="$1" i s bar=""
+  UI_CUR=$cur
   if [ "$UI_ON" != 1 ]; then printf '\n%s%s%s\n' "$B" "${UI_STEPS[$((cur - 1))]:-}" "$X"; return 0; fi
   printf '\033[H\033[2J'
   printf '%sdotfiles%s  %s%s%s\n ' "$B" "$X" "$D" "$UI_HEAD" "$X"
@@ -76,6 +78,16 @@ ui_menu(){ local q="${1%%$'\n'*}" sub="" sel="$2" n i k k2 lw=0 l d w h
 ui_ask(){ UI_TEXT=""; [ "$UI_TTY" = 1 ] || return 0
   printf '%s◆%s  %s%s%s  %s(enter to skip)%s\n%s│%s  ' "$C" "$X" "$B" "$1" "$X" "$D" "$X" "$C" "$X"
   tput cnorm; IFS= read -r UI_TEXT </dev/tty || UI_TEXT=""; [ "$UI_ON" = 1 ] && tput civis; printf '%s│%s\n' "$D" "$X"; }
+
+# ui_diff LEFT RIGHT - nvim -d on two files. nvim leaves our screen when it quits, so come back
+# to it and draw the step again. fails without a terminal or nvim, or when you quit with :cq
+ui_diff(){ local st=0
+  [ "$UI_TTY" = 1 ] || return 1
+  command -v nvim >/dev/null 2>&1 || { printf '%s~%s  nvim is not installed, so nothing was merged\n' "$Y" "$X"; return 1; }
+  [ "$UI_ON" = 1 ] && { tput rmcup; tput cnorm; }
+  nvim -d "$1" "$2" </dev/tty >/dev/tty || st=$?
+  [ "$UI_ON" = 1 ] && { tput smcup; tput civis; ui_frame "$UI_CUR"; }
+  return "$st"; }
 
 # ui_next HINT - wait for enter (q stops)
 ui_next(){ local k; [ "$UI_TTY" = 1 ] || return 0
