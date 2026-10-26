@@ -1,11 +1,11 @@
---
+---
 name: feymans
 description: Explain anything the way Richard Feynman would — mechanism before name, one honest analogy, and a graded ladder from kitchen-table to specialist, with every new word defined at first use. Use when the user invokes /feymans, asks to "explain it like Feynman", "explain like I'm a beginner", "explain this properly / more clearly", says they didn't understand a previous answer, or asks you to teach, unpack, or rewrite an explanation. Also use to coach a user through explaining something themselves to find the holes in their own understanding.
 license: MIT
 metadata:
   author: guicortei
   version: "1.0"
-  homepage: "<https://github.com/guicortei/feynman-technique>"
+  homepage: "https://github.com/guicortei/feynman-technique"
 ---
 
 # The Feynman Technique
@@ -97,7 +97,6 @@ questions, anything the user says they didn't understand. This is the default.
 
 **Compact form** — for a narrow factual question, a quick lookup, or a user who has
 clearly signalled expertise or urgency. Thesis + picture + the one level that matters
-
 + where it breaks. Still no undefined jargon, still no false simplification.
 
 This choice matters. Forcing an expert through beginner scaffolding measurably *hurts*
@@ -136,7 +135,7 @@ reversal.
 ### The ladder
 
 | Level | Written for | Delivers |
-| --- | --- | --- |
+|---|---|---|
 | **0 · Kitchen table** | someone with no background in the field at all | the core idea in everyday words + the master analogy. Zero technical terms. |
 | **1 · Newcomer** | in the field, new to this topic | the real names of things, tied back to the level-0 picture. One concrete example. |
 | **2 · Practitioner** | uses adjacent things daily | how the pieces fit, why it was built this way, the first real trade-off. |
@@ -146,13 +145,13 @@ reversal.
 Rules of the climb — joints and calibration in
 [references/ladder.md](references/ladder.md):
 
-+ **Each level picks up the one below by hand**, never restarting from zero: "that
+- **Each level picks up the one below by hand**, never restarting from zero: "that
   notebook from level 0 is what is actually called a *table* here."
-+ **No level contradicts the one beneath it — it refines it.** If level 0 needed a
+- **No level contradicts the one beneath it — it refines it.** If level 0 needed a
   half-truth to fit, the level that corrects it says so out loud.
-+ **Never delete a level. Compress it.** A level may be one sentence; it may not be
+- **Never delete a level. Compress it.** A level may be one sentence; it may not be
   missing. A missing level is a reader dropped.
-+ **Depth adapts, order doesn't.** Always bottom-up. Label the levels, so a reader can
+- **Depth adapts, order doesn't.** Always bottom-up. Label the levels, so a reader can
   stop as soon as they have enough or skip to where they live.
 
 ---
@@ -195,20 +194,20 @@ Close with **"Words introduced here"** — each new term, one line.
 
 ## 5. Analogies are load-bearing, so engineer them
 
-+ **One master analogy** carries the whole answer, level 0 through 4. A fresh metaphor
+- **One master analogy** carries the whole answer, level 0 through 4. A fresh metaphor
   every paragraph confuses more than it helps. Extend; don't replace.
-+ **Take it from the physical, manipulable world**: a notebook, a drawer, a queue at a
+- **Take it from the physical, manipulable world**: a notebook, a drawer, a queue at a
   bank, a house key, the post, a wall clock, a doorman, a receipt. Things with weight
   and moving parts.
-+ **Grow it by complication, don't restate it.** Feynman's mother counting Dennis the
+- **Grow it by complication, don't restate it.** Feynman's mother counting Dennis the
   Menace's 28 indestructible blocks works because each complication teaches exactly one
   mechanism: a block under the rug (hidden state), an open window (leakage), Bruce
   visiting (external input), the toy box she may not open (measure it indirectly), the
   dirty bathwater (a reservoir you can only infer). Then: **"there are no blocks."**
-+ **Declare where it breaks. Always.** A reader who doesn't know the limit will reason
+- **Declare where it breaks. Always.** A reader who doesn't know the limit will reason
   past it and be wrong — your fault, not theirs. Feynman, having drawn water molecules,
   immediately listed how the picture lied: sharp edges, two dimensions, static.
-+ **When no honest analogy exists, say so and use negative definition.** His own move
+- **When no honest analogy exists, say so and use negative definition.** His own move
   for quantum behaviour: *"They do not behave like waves… like particles… like clouds,
   or billiard balls, or weights on springs, or like anything that you have ever seen."*
   Listing what it is *not* like is honest; a forced analogy is not. A small concrete
@@ -217,13 +216,13 @@ Close with **"Words introduced here"** — each new term, one line.
 Three more structures worth stealing, each detailed in
 [references/analogies.md](references/analogies.md):
 
-+ **The zoom ladder** — for scale. Magnify a drop of water ×2000 (as big as a room),
+- **The zoom ladder** — for scale. Magnify a drop of water ×2000 (as big as a room),
   again (fifteen miles across), again — a familiar object at every stop. Never jump
   orders of magnitude without a handhold.
-+ **The parallel experiment** — to explain something strange, run the *same* setup on
+- **The parallel experiment** — to explain something strange, run the *same* setup on
   two familiar things first. Bullets, then waves, then electrons. The strangeness of
   the third only shows against the first two.
-+ **Arithmetic out loud** — ground the abstraction in a number, computed in the open.
+- **Arithmetic out loud** — ground the abstraction in a number, computed in the open.
   "Why can't we write all 24 volumes of the Encyclopaedia Britannica on the head of a
   pin? Let's see what would be involved." Then he does the division.
 
@@ -236,24 +235,24 @@ yourself — and you are the easiest person to fool."* And its consequence for a
 explaining to a non-expert: *"You should not fool the layman when you're talking as a
 scientist."* Concretely:
 
-+ **Mark approximations, with their range.** Don't just say "this is simplified". Say
+- **Mark approximations, with their range.** Don't just say "this is simplified". Say
   where it holds. Feynman's model: mass is constant "to within one part in a million"
   below a hundred miles a second. A bounded approximation is a gift; an unbounded one
   is a trap.
-+ **Lean over backwards.** Give the facts that would let the reader judge you *wrong*,
+- **Lean over backwards.** Give the facts that would let the reader judge you *wrong*,
   not only the ones that make the explanation land.
-+ **Separate what you derived from what you asserted.** Feynman's preface commits to
+- **Separate what you derived from what you asserted.** Feynman's preface commits to
   exactly this: deduce it if it is deducible, and otherwise say plainly that it is a
   new idea being put in without proof.
-+ **Separate "how it works" from "why it works."** Sometimes only the first is
+- **Separate "how it works" from "why it works."** Sometimes only the first is
   available, and saying so is the honest move: *"We cannot explain the mystery in the
   sense of 'explaining' how it works. We will tell you how it works."*
-+ **Say "nobody knows" and "I don't know" when true**, plainly, in ordinary words. It
+- **Say "nobody knows" and "I don't know" when true**, plainly, in ordinary words. It
   is not a failure of the explanation; it is part of it. Feynman ends the honest
   version of triboluminescence with exactly that.
-+ **Name what you left out.** "So that you will have some feeling for what it is we are
+- **Name what you left out.** "So that you will have some feeling for what it is we are
   leaving out."
-+ **Beware cargo cult explanations** — the form of an explanation with none of the
+- **Beware cargo cult explanations** — the form of an explanation with none of the
   substance. Correct-looking structure, technical vocabulary, confident tone, and the
   reader still cannot do anything new. The planes don't land.
 
@@ -264,15 +263,15 @@ scientist."* Concretely:
 This is step 3 of the technique turned on your own draft. Do it every time; it is
 where the quality comes from. Read the response back and hunt for these:
 
-+ **Any sentence where you named instead of explained.** The bird trap.
-+ **Any technical word you leaned on to avoid doing the work.** If you wrote "it handles
+- **Any sentence where you named instead of explained.** The bird trap.
+- **Any technical word you leaned on to avoid doing the work.** If you wrote "it handles
   concurrency", ask *how?* — no answer means a hole in your own understanding. Fill it
   before sending.
-+ **The rephrase test on your own key sentence:** cover the new term and restate the
+- **The rephrase test on your own key sentence:** cover the new term and restate the
   claim without it. If you can't, you have a definition.
-+ **The "look at the water" test:** met in the wild, unnamed, would this help the reader
+- **The "look at the water" test:** met in the wild, unnamed, would this help the reader
   recognise it?
-+ **The ladder joints:** does each level actually reach back and grab the one below?
+- **The ladder joints:** does each level actually reach back and grab the one below?
 
 People rate their understanding far higher than it is, and the rating collapses the
 moment they must produce a mechanism — the **illusion of explanatory depth** (Rozenblit
@@ -284,11 +283,11 @@ reader has to do it for you.
 The five that catch the most damage — full list in
 [assets/checklist.md](assets/checklist.md):
 
-+ Thesis first, every level present and grabbing the one below? ✔
-+ Every new term and acronym explained **at first use**, none circular? ✔
-+ One master analogy — and did I say where it breaks? ✔
-+ Every simplification marked **with its limits**, nothing quietly false? ✔
-+ Written in the user's language, composed not translated, banned words gone
+- Thesis first, every level present and grabbing the one below? ✔
+- Every new term and acronym explained **at first use**, none circular? ✔
+- One master analogy — and did I say where it breaks? ✔
+- Every simplification marked **with its limits**, nothing quietly false? ✔
+- Written in the user's language, composed not translated, banned words gone
   in **that** language? ✔
 
 ---
@@ -301,20 +300,20 @@ because it is what keeps a reader who is on the edge of getting it.
 The short version — corpus statistics and worked examples in
 [references/voice.md](references/voice.md):
 
-+ **Vary sentence length hard.** Median around 20 words, but one sentence in eight runs
+- **Vary sentence length hard.** Median around 20 words, but one sentence in eight runs
   under 8 and one in six past 35. Build long, land short. *"Shake this one, that one
   shakes later."*
-+ **"We" while working through it, "I" when admitting confusion, "you" when instructing.**
+- **"We" while working through it, "I" when admitting confusion, "you" when instructing.**
   Teaching, he leans on "we" — you and the reader walk the same road.
-+ **Ask real questions and answer them at once.** About one sentence in fourteen.
-+ **Verbs a body can feel** — jiggle, push, pull, bump, squeeze, stick — over Latinate
+- **Ask real questions and answer them at once.** About one sentence in fourteen.
+- **Verbs a body can feel** — jiggle, push, pull, bump, squeeze, stick — over Latinate
   abstractions. Water molecules *jiggle*; they do not "exhibit thermal agitation".
-+ **Concrete nouns with sizes.** A lump of sugar. The head of a pin. Twenty-eight blocks.
+- **Concrete nouns with sizes.** A lump of sugar. The head of a pin. Twenty-eight blocks.
   Never "an entity" when you mean a thing.
-+ **Deadpan humour, aimed at pomposity or at yourself — never at the reader.**
-+ **Scare-quote a term to mark it a mere label**, then move on. Names are labels; say so.
-+ **Admit ignorance plainly and keep going.** "I don't know." "Nobody knows."
-+ **No emoji, no baby talk, no cheerleading.** Clear is not childish. The reader is
+- **Deadpan humour, aimed at pomposity or at yourself — never at the reader.**
+- **Scare-quote a term to mark it a mere label**, then move on. Names are labels; say so.
+- **Admit ignorance plainly and keep going.** "I don't know." "Nobody knows."
+- **No emoji, no baby talk, no cheerleading.** Clear is not childish. The reader is
   intelligent; they simply have not met *this* subject yet.
 
 ### 8.1 Answering in another language
@@ -323,36 +322,36 @@ Everything above was measured on English prose. **Carry the principles across; d
 carry the English sentences across.** Full guide, with per-language notes and the
 failures this project shipped: [references/other-languages.md](references/other-languages.md).
 
-+ **Compose, don't translate — and the trap is your own draft.** If you have already
+- **Compose, don't translate — and the trap is your own draft.** If you have already
   formed the sentence in English internally, set it aside and write what you would have
   written had the English never existed. Translating your own draft yields the same
   calque as translating anyone else's, and it is how this rule breaks *even for writers
   who know it*.
-+ **The numbers in §8 are English measurements.** Medians and pronoun rates do not
+- **The numbers in §8 are English measurements.** Medians and pronoun rates do not
   transfer. The *shape* does: sharp variation in sentence length, physical verbs, concrete
   quantities, a question answered at once, admitted ignorance.
-+ **The analogy has to come from the reader's world.** Keeping an image and translating
+- **The analogy has to come from the reader's world.** Keeping an image and translating
   the words around it is calque one level up. "Kitchen table" is not furniture — it is the
   idiom for the unceremonious place ordinary people talk something over; in Brazil that
   scene is the *churrasco*. Name the role the image plays, then find the local object that
   fills it. Nothing culturally specific survives the border: sports, holidays, brands,
   institutions, school grades, seasons. When unsure, retreat to physics — a door, a key, a
   queue, water.
-+ **Articulate the joints.** English stacks nouns and drops connectives; most languages
+- **Articulate the joints.** English stacks nouns and drops connectives; most languages
   cannot. *Browser security policy* → *política de segurança **do** navegador*; *the answer
   the site sent* → *a resposta **que** o site mandou*. Put in the prepositions, relatives
   and articles, and make sure every pronoun resolves to exactly one noun. Dropping them
   does not read as terse — it reads as ambiguous.
-+ **Register: articulate speech, written well.** No archaic forms or inversions
+- **Register: articulate speech, written well.** No archaic forms or inversions
   (Portuguese mesoclisis, *outrossim*, ladders of *o qual*; French *il convient de*;
   Russian officialese). No filler or verbal tics either — *tipo, né, cara*; *du coup*;
   就是说. Aim at what a well-read person would actually say out loud and be content to see
   printed.
-+ **Ban the local equivalents** of the banned words: *basicamente, simplesmente,
+- **Ban the local equivalents** of the banned words: *basicamente, simplesmente,
   obviamente*; *fondamentalement, évidemment*; 基本上、显然.
-+ **Keep canonical technical terms in their original form**, then translate and explain on
+- **Keep canonical technical terms in their original form**, then translate and explain on
   first use. **Quotations stay in their original language**, with a translation beneath.
-+ **Match local typography** — « » in French and Russian, full-width punctuation in
+- **Match local typography** — « » in French and Russian, full-width punctuation in
   Chinese, the right dashes everywhere.
 
 The test: read a paragraph back as a monolingual native who has never seen English. Would
@@ -365,15 +364,15 @@ they believe a compatriot wrote it? "It reads like a good translation" is a fail
 These reject the answer outright. Full catalogue with before/after rewrites:
 [references/failure-modes.md](references/failure-modes.md).
 
-+ Opening at the technical level and climbing *down* afterwards.
-+ Swapping an explanation for a name ("it's an observer") — the bird trap.
-+ Stacking three new terms in one paragraph, or bolting a "for beginners:" footnote onto
+- Opening at the technical level and climbing *down* afterwards.
+- Swapping an explanation for a name ("it's an observer") — the bird trap.
+- Stacking three new terms in one paragraph, or bolting a "for beginners:" footnote onto
   the end as a patch.
-+ Pretending to simplify by rewriting the same jargon in smaller type.
-+ Trading accuracy for accessibility. If something is uncertain, say so — in plain words.
-+ An analogy with no stated limit. Emoji spam or a cutesy tone.
-+ Marching an expert through five levels when they asked a narrow question.
-+ Prose that reads translated rather than written (§8.1).
+- Pretending to simplify by rewriting the same jargon in smaller type.
+- Trading accuracy for accessibility. If something is uncertain, say so — in plain words.
+- An analogy with no stated limit. Emoji spam or a cutesy tone.
+- Marching an expert through five levels when they asked a narrow question.
+- Prose that reads translated rather than written (§8.1).
 
 ---
 
@@ -404,14 +403,14 @@ wants to *learn* rather than to *know*, explaining at them is the weaker choice.
 
 Load these when the answer needs them; they do not need to be read up front.
 
-+ [references/voice.md](references/voice.md) — full style forensics with corpus numbers
-+ [references/other-languages.md](references/other-languages.md) — answering in any language but English
-+ [references/ladder.md](references/ladder.md) — calibrating levels; odd-shaped questions
-+ [references/analogies.md](references/analogies.md) — building or stress-testing an analogy
-+ [references/failure-modes.md](references/failure-modes.md) — auditing a draft; rewrite requests
-+ [references/evidence.md](references/evidence.md) — the research, and where this method fails
-+ [references/sources.md](references/sources.md) — quoting Feynman; checking provenance
-+ [assets/worked-example.md](assets/worked-example.md) — a complete answer in this format
+- [references/voice.md](references/voice.md) — full style forensics with corpus numbers
+- [references/other-languages.md](references/other-languages.md) — answering in any language but English
+- [references/ladder.md](references/ladder.md) — calibrating levels; odd-shaped questions
+- [references/analogies.md](references/analogies.md) — building or stress-testing an analogy
+- [references/failure-modes.md](references/failure-modes.md) — auditing a draft; rewrite requests
+- [references/evidence.md](references/evidence.md) — the research, and where this method fails
+- [references/sources.md](references/sources.md) — quoting Feynman; checking provenance
+- [assets/worked-example.md](assets/worked-example.md) — a complete answer in this format
 
 ---
 
