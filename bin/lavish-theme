@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+# lavish-theme - prints the <head> lines for a lavish page in your terminal's colors:
+# daisyui + tailwind (pinned, same versions lavish recommends) and a daisyui theme made
+# from ghostty's current theme. put data-theme="ghostty" on <html>.
+# without ghostty it prints the same links and says to use lavish's default theme instead.
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+CDN = """<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/daisyui.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daisyui@5.5.19/themes.css">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.2.4/dist/index.global.js"></script>"""
+
+
+def ghostty():
+    for g in (shutil.which("ghostty"), "/Applications/Ghostty.app/Contents/MacOS/ghostty"):
+        if g and os.access(g, os.X_OK):
+            try:
+                return subprocess.run([g, "+show-config"], capture_output=True, text=True, timeout=10).stdout
+            except (OSError, subprocess.SubprocessError):
+                return ""
+    return ""
+
+
+def rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def hexc(c):
+    return "#%02x%02x%02x" % tuple(max(0, min(255, round(v))) for v in c)
+
+
+def mix(a, b, t):
+    return hexc(x + (y - x) * t for x, y in zip(rgb(a), rgb(b)))
+
+
+def lum(h):
+    def ch(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    r, g, b = (ch(v) for v in rgb(h))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(a, b):
+    la, lb = sorted((lum(a), lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def main():
+    cfg = ghostty()
+    val = dict(re.findall(r"^(background|foreground|theme) = (.+)$", cfg, re.M))
+    pal = dict(re.findall(r"^palette = (\d+)=(#[0-9a-fA-F]{6})$", cfg, re.M))
+    bg, fg = val.get("background", ""), val.get("foreground", "")
+    if not (re.fullmatch(r"#[0-9a-fA-F]{6}", bg) and re.fullmatch(r"#[0-9a-fA-F]{6}", fg) and all(str(i) in pal for i in range(13))):
+        print(CDN)
+        print('<!-- no ghostty theme found: use <html data-theme="luxury">, the lavish default -->')
+        return
+    dark = lum(bg) < lum(fg)
+    # text on a colored button: the page background or the page text, whichever reads better
+    on = lambda c: bg if contrast(c, bg) >= contrast(c, fg) else fg
+    colors = {
+        "primary": pal["4"], "secondary": pal["5"], "accent": pal["6"], "neutral": pal["8"],
+        "info": pal["12"], "success": pal["2"], "warning": pal["3"], "error": pal["1"],
+    }
+    lines = [f"color-scheme: {'dark' if dark else 'light'};",
+             f"--color-base-100: {bg};",
+             f"--color-base-200: {mix(bg, '#000000', 0.18 if dark else 0.05)};",
+             f"--color-base-300: {mix(bg, fg, 0.18)};",
+             f"--color-base-content: {fg};"]
+    for k, c in colors.items():
+        lines += [f"--color-{k}: {c};", f"--color-{k}-content: {on(c)};"]
+    lines += ["--radius-selector: 1rem;", "--radius-field: 0.5rem;", "--radius-box: 1rem;",
+              "--size-selector: 0.25rem;", "--size-field: 0.25rem;", "--border: 1px;", "--depth: 1;", "--noise: 0;"]
+    print(CDN)
+    print(f'<style>\n  /* daisyui theme from ghostty ({val.get("theme", "custom colors")}). use <html data-theme="ghostty"> */')
+    print('  [data-theme="ghostty"] {\n    ' + "\n    ".join(lines) + "\n  }\n</style>")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

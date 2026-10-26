@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" data-theme="__THEME__" data-lavish-annotate="off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+__HEAD__
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; }
+  :where(p, h1, h2, li, label, .badge) { overflow-wrap: anywhere; }
+</style>
+</head>
+<body class="bg-base-100 text-base-content min-h-screen">
+<main class="max-w-3xl mx-auto px-4 pt-6 pb-32 flex flex-col gap-4">
+  <header class="flex flex-col gap-1">
+    <h1 class="text-2xl font-bold">__TITLE__</h1>
+    <p class="opacity-80">__INTRO__</p>
+    <p class="text-sm opacity-60">The recommended answers are already picked. Change only what's wrong, then send.</p>
+  </header>
+__QUESTIONS__
+</main>
+<footer class="fixed bottom-0 inset-x-0 border-t border-base-300 bg-base-200">
+  <div class="max-w-3xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+    <button type="button" class="btn btn-primary" data-batch-queue>Queue these answers</button>
+    <span class="text-sm opacity-80 grow" data-batch-status role="status" aria-live="polite"></span>
+    <div>
+      <button type="button" class="btn" onclick="(async (btn) => {
+        const copyRun = btn._lavishCopyRun = (btn._lavishCopyRun || 0) + 1;
+        const qs = [...document.querySelectorAll('[data-lavish-question]')];
+        const status = btn.parentElement.querySelector('[data-lavish-copy-all-status]');
+        btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+        const out = [];
+        for (const q of qs) {
+          const key = q.getAttribute('data-lavish-question')?.trim() || 'Question';
+          const lines = [];
+          for (const el of q.querySelectorAll('input, select, textarea')) {
+            if (el.matches(':disabled')) continue;
+            if (el.closest('[data-lavish-question]') !== q) continue;
+            const isChoice = el.matches('input[type=checkbox], input[type=radio]');
+            if (isChoice && !el.checked) continue;
+            if (el.matches('input[type=button], input[type=submit], input[type=reset], input[type=image], input[type=hidden], input[type=file], input[type=range], input[type=color]')) continue;
+            let vals;
+            if (el instanceof HTMLSelectElement) {
+              vals = [...el.selectedOptions].filter((o) => !o.disabled && !o.closest('optgroup[disabled]')).map((o) => o.value.trim()).filter(Boolean);
+            } else {
+              const v = isChoice && (!el.hasAttribute('value') || !el.value.trim())
+                ? el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.name || ''
+                : el.value.trim();
+              vals = v ? [v] : [];
+            }
+            const label = el.name || el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.getAttribute('placeholder')?.trim() || el.tagName.toLowerCase();
+            for (const v of vals) lines.push('  ' + label + ': ' + v.split('\n').join('\n    '));
+          }
+          if (lines.length) out.push(key + ':\n' + lines.join('\n'));
+        }
+        const text = out.join('\n\n');
+        if (!text) {
+          status.textContent = qs.length ? 'No answers to copy yet.' : 'No questions or answers to copy.';
+          return;
+        }
+        status.textContent = '';
+        try {
+          if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard API unavailable');
+          await navigator.clipboard.writeText(text);
+          if (copyRun !== btn._lavishCopyRun) return;
+          status.textContent = 'Answers copied.';
+          return;
+        } catch {}
+        if (copyRun !== btn._lavishCopyRun) return;
+        const tmp = document.createElement('textarea');
+        tmp.value = text;
+        tmp.readOnly = true;
+        tmp.setAttribute('aria-hidden', 'true');
+        tmp.style.position = 'fixed';
+        tmp.style.left = '-10000px';
+        document.body.append(tmp);
+        tmp.focus();
+        tmp.select();
+        let ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } catch {}
+        tmp.remove();
+        if (ok) {
+          status.textContent = 'Answers copied.';
+          return;
+        }
+        btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+        const man = document.createElement('textarea');
+        man.value = text;
+        man.readOnly = true;
+        man.rows = Math.min(12, Math.max(3, text.split('\n').length));
+        man.setAttribute('aria-label', 'Answers to copy manually');
+        man.dataset.lavishCopyAllManual = '';
+        btn.insertAdjacentElement('afterend', man);
+        man.focus();
+        man.select();
+        status.textContent = 'Clipboard unavailable. Copy the answers below manually.';
+      })(this)">Copy all answers</button>
+      <span data-lavish-copy-all-status role="status" aria-live="polite"></span>
+    </div>  </div>
+</footer>
+<script>
+(() => {
+  const qs = [...document.querySelectorAll('[data-lavish-question]')];
+  const status = document.querySelector('[data-batch-status]');
+  const lavish = () => window.lavish && window.lavish.queuePrompt;
+  function answer(q) {
+    const picked = [...q.querySelectorAll('input:checked')].map(i => i.value);
+    const note = q.querySelector('textarea').value.trim();
+    const rec = JSON.parse(q.dataset.recommended);
+    const same = !note && picked.length === rec.length && picked.every(p => rec.includes(p));
+    return { id: q.dataset.lavishQuestion, question: q.dataset.label, answer: picked.join('; ') || '(none picked)', note, recommended: same };
+  }
+  function paint() {
+    qs.forEach(q => {
+      const a = answer(q);
+      q.classList.toggle('border-warning', !a.recommended);
+      q.querySelector('[data-changed]').hidden = a.recommended;
+    });
+  }
+  function message(items) {
+    return 'grill-me batch round: ' + items.length + ' answers. Write each one to the brainstorm file as its own Q entry right away, '
+      + 'then go on. Account for every ID before you ask anything else.\n'
+      + items.map(i => i.id + ' ' + i.question + ': ' + i.answer + (i.recommended ? ' (your recommendation)' : '') + (i.note ? ' | note: ' + i.note : '')).join('\n');
+  }
+  function queue() {
+    const items = qs.map(answer), n = items.filter(i => !i.recommended).length;
+    if (!lavish()) { status.textContent = 'Not in lavish: copy all answers and paste them into the chat.'; return; }
+    // one key for the whole set, so every change replaces the last unsent copy
+    window.lavish.queuePrompt(message(items), { tag: 'grill-batch', text: 'Answers to ' + items.length + ' questions (' + n + ' changed)', queueKey: 'grill-batch', data: { items } });
+    status.textContent = items.length + ' answers queued (' + n + ' changed). They go with Send to agent.';
+  }
+  let touched = false, t = null;
+  document.addEventListener('change', e => { if (e.target.closest('[data-lavish-question]')) { touched = true; paint(); queue(); } });
+  document.addEventListener('input', e => {
+    if (!e.target.matches('textarea')) return;
+    touched = true; paint(); clearTimeout(t); t = setTimeout(queue, 400);
+  });
+  document.querySelector('[data-batch-queue]').addEventListener('click', () => { touched = true; queue(); });
+  paint();
+  status.textContent = lavish() ? 'Changes queue themselves. If the picks are all right, press Queue these answers.' : 'Not in lavish: use Copy all answers and paste them into the chat.';
+})();
+</script>
+</body>
+</html>

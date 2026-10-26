@@ -26,7 +26,7 @@ After EVERY user answer, BEFORE you ask the next question:
 - Update or correct earlier entries if a later answer changes them.
 - Only then ask the next question.
 
-Never batch multiple answers into one write. Checkpoint one answer at a time. The point is that if context is lost at any moment, the file already holds everything said so far.
+Never batch multiple answers into one write. Checkpoint one answer at a time. The point is that if context is lost at any moment, the file already holds everything said so far. Answers from a batch round (below) arrive together: write one entry per answer right away, before anything else.
 
 ## Interview method
 
@@ -35,6 +35,25 @@ Never batch multiple answers into one write. Checkpoint one answer at a time. Th
 - If a question can be answered by **exploring the codebase or reading a file/doc**, do that instead of asking. If the user hands you a doc (e.g. a Google Doc), read it and only surface what's net-new.
 - When the user **can't answer** something, capture it as a flag with the right owner and move on. Don't stall.
 - Keep going until the user says you're done, or you've covered every branch. Offer a completeness backstop near the end ("anything we haven't touched?").
+
+## Batch round (independent questions on one page)
+
+When the questions left don't depend on each other (no answer would change another question), ask them all at once on one page instead of one at a time. Keep asking one at a time while answers still shape the next question.
+
+1. Write the questions to `.lavish/grill-{topic-slug}/questions.json` in the working folder:
+   ```json
+   {"title": "Topic: open questions", "intro": "one line on what these decide",
+    "questions": [{"id": "q1", "q": "the question", "why": "one line of context",
+      "options": [["label", "what it means"], ["label", "what it means"]],
+      "recommended": ["label"], "multi": false}]}
+   ```
+   Every question gets your recommended answer, which starts out picked. Use short, stable IDs (`q1`, `q2`...) and 2 to 4 options. The user can always type their own answer.
+2. Build the page: `python3 <this skill>/kit/batch.py .lavish/grill-{topic-slug}/questions.json .lavish/grill-{topic-slug}/questions.html`. It uses the terminal's colors when `lavish-theme` is on PATH.
+3. Open it with `npx -y lavish-axi@0.1.93 <questions.html>`, then run `npx -y lavish-axi@0.1.93 poll <questions.html>` as a background job your harness tracks (in Claude Code: Bash with `run_in_background`). Never `nohup` or `&`. With no tracked background jobs, poll in the foreground.
+4. Every change on the page re-queues the whole set under one key, so what the user sends is what the page shows. The answers come back tagged `grill-batch`, one line per ID. Check that every ID is there, then checkpoint one entry per answer and mark the ones that differ from your recommendation.
+5. Without lavish (no Node, or the user isn't at a browser), the page's "Copy all answers" button copies the answers for them to paste into the chat. Or just ask the questions one at a time.
+
+Never run `lavish-axi share`: it publishes the page on a public third-party site.
 
 ## Capture file structure
 
@@ -46,7 +65,7 @@ Date: {date} · Goal: {one line}
 (running synthesis, updated as you go)
 
 ## Q&A log
-### Q1 — {topic}
+### Q1 - {topic}
 - Asked: {question}
 - Captured: {facts, decisions, in their words where it matters}
 - Flags: {open item -> owner}

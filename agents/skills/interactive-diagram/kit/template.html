@@ -363,7 +363,8 @@ q.addEventListener('keydown', e => {
   if (e.key === 'Escape') { q.value = ''; q.dispatchEvent(new Event('input')); q.blur(); }
 });
 document.addEventListener('keydown', e => {
-  if (e.target === q) return;
+  // typing in a field (search, or a review tool's comment box) isn't a shortcut
+  if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
   if (e.key === 'Escape') { flow = null; sel = null; paint(); overview(); if (drill) { const p = N[drill].p; p ? (drillTo(p)) : fit(); } }
   if (e.key === 'f' || e.key === 'F') fit();
   if (e.key === '/') { e.preventDefault(); q.focus(); }
@@ -372,5 +373,6 @@ window.addEventListener('resize', () => { drill ? setVB(frame(N[drill].bbox)) : 
 setVB(frame([0, 0, W, H], 8));
 overview();
 </script>
+__REVISIONS__
 </body>
 </html>

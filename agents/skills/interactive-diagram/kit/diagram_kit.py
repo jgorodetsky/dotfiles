@@ -3,6 +3,7 @@ import html
 import json
 import os
 import re
+from datetime import datetime, timezone
 
 KIT = os.path.dirname(os.path.abspath(__file__))
 COL = {"built": "#1d8a4a", "todo": "#d42a2a", "ext": "#7a8491"}
@@ -73,6 +74,7 @@ class Diagram:
         self.statuses = statuses or {"built": "Built", "todo": "Not built", "ext": "Existing"}
         self.icons, self.rects, self.items, self.arrows, self.titles = {}, [], [], [], []
         self.nodes, self.flows = {}, []
+        self.revisions, self.revs_used = [], set()
 
     def icon(self, key, source):
         if source.lstrip().startswith("<svg"):
@@ -82,6 +84,17 @@ class Diagram:
             with open(os.path.expanduser(source), "rb") as fh:
                 uri = f"data:{MIME.get(ext, 'image/svg+xml')};base64," + base64.b64encode(fh.read()).decode()
         self.icons[key] = uri
+
+    def revision(self, id, label, summary, timestamp=None):
+        # one review round. pass rev=id on what changed in it and lavish shows a Revisions legend
+        ts = timestamp or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.revisions.append({"id": id, "label": label, "timestamp": ts, "summary": summary})
+
+    def _rev(self, rev):
+        if not rev:
+            return ""
+        self.revs_used.add(rev)
+        return f' data-lavish-revision="{esc(rev)}"'
 
     def _reg(self, id, label, st, kind, parent, bbox, **kw):
         if id in self.nodes:
@@ -100,10 +113,11 @@ class Diagram:
         return (f'<rect class="tl" x="{cx-28}" y="{cy-28}" width="56" height="56" rx="10" fill="{c}" '
                 f'fill-opacity="{fo}" stroke="{c}" stroke-width="{sw}"/>{body}')
 
-    def boundary(self, id, parent, x, y, w, h, title, icon=None, st="zone", sub=None, dash=None, fill="none", fop=0, sw=1.4, **detail):
+    def boundary(self, id, parent, x, y, w, h, title, icon=None, st="zone", sub=None, dash=None, fill="none", fop=0, sw=1.4, rev=None, **detail):
         stroke = {"zone": LINE, **COL}[st]
         d = f' stroke-dasharray="{dash}"' if dash else ""
-        self.rects.append(f'<rect class="bdr st-{st}" x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{fill}" '
+        rv = self._rev(rev)
+        self.rects.append(f'<rect class="bdr st-{st}"{rv} x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{fill}" '
                           f'fill-opacity="{fop}" stroke="{stroke}" stroke-width="{sw}"{d}/>')
         tx, head = x + 12, []
         if icon in self.icons:
@@ -115,11 +129,11 @@ class Diagram:
         if sub:
             head.append(f'<text x="{tx + tw + 10}" y="{y+23}" font-size="11" fill="{MUTED}">{esc(sub)}</text>')
             tw += 10 + len(sub) * 5.9
-        self.titles.append(f'<g class="bd st-{st}" data-id="{esc(id)}" tabindex="0" role="button" aria-label="{esc(title)}">'
+        self.titles.append(f'<g class="bd st-{st}" data-id="{esc(id)}"{rv} tabindex="0" role="button" aria-label="{esc(title)}">'
                            f'<rect class="hit" x="{x+4}" y="{y+5}" width="{tx - x + tw + 8}" height="26" rx="6" fill="transparent"/>{"".join(head)}</g>')
         self._reg(id, title, st, "boundary", parent, [x, y, w, h], sub=sub, icon=icon if icon in self.icons else None, **detail)
 
-    def item(self, id, parent, cx, cy, label, sub="", st="built", icon=None, lw=118, pos="below", **detail):
+    def item(self, id, parent, cx, cy, label, sub="", st="built", icon=None, lw=118, pos="below", rev=None, **detail):
         lc = "#b42323" if st == "todo" else INK
         parts = [self._tile(cx, cy, st, icon, label)]
         if pos == "below":
@@ -139,34 +153,35 @@ class Diagram:
             if sl:
                 parts.append(_lines(cx + 36, y0 + h, sl, 10.5, 400, MUTED, "start")[0])
             bbox = [cx - 30, cy - max(30, total / 2 + 4), 66 + lw, max(60, total + 8)]
-        self.items.append(f'<g class="it st-{st}" data-id="{esc(id)}" tabindex="0" role="button" aria-label="{esc(label)}">{"".join(parts)}</g>')
+        self.items.append(f'<g class="it st-{st}" data-id="{esc(id)}"{self._rev(rev)} tabindex="0" role="button" aria-label="{esc(label)}">{"".join(parts)}</g>')
         self._reg(id, label, st, "item", parent, bbox, sub=sub, icon=icon if icon in self.icons else None, **detail)
 
-    def cloud(self, id, parent, cx, cy, label, sub="", st="ext", lw=170, **detail):
+    def cloud(self, id, parent, cx, cy, label, sub="", st="ext", lw=170, rev=None, **detail):
         c = COL[st]
         s, h = _lines(cx, cy + 44, wrap(label, lw, 12), 12, 600, INK, "middle")
         s2, h2 = _lines(cx, cy + 44 + h, wrap(sub, lw, 10.5), 10.5, 400, MUTED, "middle") if sub else ("", 0)
         self.items.append(
-            f'<g class="it st-{st}" data-id="{esc(id)}" tabindex="0" role="button" aria-label="{esc(label)}">'
+            f'<g class="it st-{st}" data-id="{esc(id)}"{self._rev(rev)} tabindex="0" role="button" aria-label="{esc(label)}">'
             f'<rect class="tl" x="{cx-28}" y="{cy-28}" width="56" height="56" rx="10" fill="{c}" fill-opacity="0.12" stroke="{c}" stroke-width="1.6"/>'
             f'<path transform="translate({cx-17},{cy-11})" d="M9 22 a7 7 0 0 1 0-14 a9 9 0 0 1 17-2 a6.5 6.5 0 0 1 2 13 z" fill="#ffffff" stroke="{c}" stroke-width="2"/>'
             f'{s}{s2}</g>')
         self._reg(id, label, st, "item", parent, [cx - lw / 2, cy - 30, lw, 60 + h + h2 + 8], sub=sub, **detail)
 
-    def chip(self, id, parent, x, y, w, text, st="built", **detail):
+    def chip(self, id, parent, x, y, w, text, st="built", rev=None, **detail):
         c = COL[st]
         fc, sw = ("#b42323", 2) if st == "todo" else (INK, 1.4)
         self.items.append(
-            f'<g class="it st-{st}" data-id="{esc(id)}" tabindex="0" role="button" aria-label="{esc(text)}">'
+            f'<g class="it st-{st}" data-id="{esc(id)}"{self._rev(rev)} tabindex="0" role="button" aria-label="{esc(text)}">'
             f'<rect class="tl" x="{x}" y="{y}" width="{w}" height="26" rx="6" fill="{c}" fill-opacity="0.13" stroke="{c}" stroke-width="{sw}"/>'
             f'<text x="{x+w/2}" y="{y+17}" font-size="11" font-weight="600" fill="{fc}" text-anchor="middle">{esc(text)}</text></g>')
         self._reg(id, text, st, "item", parent, [x, y, w, 26], **detail)
 
-    def arrow(self, flow, points, blocked=False):
-        style = next((f["style"] for f in self.flows if f["id"] == flow), "solid")
+    def arrow(self, flow, points, blocked=False, rev=None):
+        f0 = next((f for f in self.flows if f["id"] == flow), {})
+        style, rv = f0.get("style", "solid"), self._rev(rev or f0.get("rev"))
         pts = " ".join(f"{a},{b}" for a, b in points)
         color, marker = (COL["todo"], "ahr") if blocked else (INK, "ah")
-        self.arrows.append(f'<polyline class="fa fa-{flow}{" blk" if blocked else ""}" points="{pts}" fill="none" '
+        self.arrows.append(f'<polyline class="fa fa-{flow}{" blk" if blocked else ""}"{rv} points="{pts}" fill="none" '
                            f'stroke="{color}" stroke-width="2"{DASH[style]} marker-end="url(#{marker})"/>')
 
     def badge(self, flow, x, y):
@@ -179,13 +194,14 @@ class Diagram:
         self.arrows.append(f'<g class="fa fa-{flow} blk"><circle cx="{x}" cy="{y}" r="8" fill="#fff" stroke="{r}" stroke-width="2"/>'
                            f'<path d="M{x-3.5},{y-3.5} L{x+3.5},{y+3.5} M{x+3.5},{y-3.5} L{x-3.5},{y+3.5}" stroke="{r}" stroke-width="2" stroke-linecap="round"/></g>')
 
-    def flow(self, id, name, blurb, style, steps):
+    def flow(self, id, name, blurb, style, steps, rev=None):
         if style not in DASH:
             raise ValueError(f"flow style must be one of {list(DASH)}")
-        self.flows.append({"id": id, "n": len(self.flows) + 1, "name": name, "blurb": blurb, "style": style, "steps": steps})
+        self.flows.append({"id": id, "n": len(self.flows) + 1, "name": name, "blurb": blurb, "style": style, "steps": steps, "rev": rev})
 
     def check(self):
         problems = [f"flow {f['id']} step {s[0]} is not a node" for f in self.flows for s in f["steps"] if s[0] not in self.nodes]
+        problems += [f"rev {r} is not a declared revision" for r in sorted(self.revs_used - {r['id'] for r in self.revisions})]
         ids = [n for n in self.nodes.values() if n["kind"] == "item"]
         for i, a in enumerate(ids):
             ax, ay, aw, ah = a["bbox"]
@@ -217,7 +233,8 @@ class Diagram:
                            "statuses": self.statuses, "subtitle": self.subtitle}, separators=(",", ":")).replace("</", "<\\/")
         with open(os.path.join(KIT, "template.html")) as fh:
             page = fh.read()
-        page = page.replace("__TITLE__", esc(self.title)).replace("__LEGEND__", legend).replace("__SVG__", svg).replace("__DATA__", data)
+        revs = ("<script type=\"application/json\" data-lavish-revisions>\n" + json.dumps(self.revisions, indent=1).replace("</", "<\\/") + "\n</script>") if self.revisions else ""
+        page = page.replace("__TITLE__", esc(self.title)).replace("__LEGEND__", legend).replace("__SVG__", svg).replace("__DATA__", data).replace("__REVISIONS__", revs)
         with open(os.path.expanduser(path), "w") as fh:
             fh.write(page)
         return {s: sum(1 for n in items if n["st"] == s) for s in self.statuses}
