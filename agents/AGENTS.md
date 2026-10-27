@@ -39,7 +39,7 @@ Every agent tool on this machine reads this file. The source is `agents/AGENTS.m
 | start a build, a bug fix or a refactor | `~/dotfiles/agents/docs/work.md` |
 | commit, push or open a pull request | `~/dotfiles/agents/docs/git.md` |
 | edit Terraform | `~/dotfiles/agents/docs/terraform.md` |
-| make a review page, use GitHub or add a new tool | `~/dotfiles/agents/docs/tools.md` |
+| use lavish, use GitHub or add a new tool | `~/dotfiles/agents/docs/tools.md` |
 | create or change a skill, this file or a file in `agents/docs/` | `~/dotfiles/agents/docs/skills.md` |
 
 ## Which skill

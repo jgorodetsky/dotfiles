@@ -263,7 +263,7 @@ repo) and install the same way when that folder exists.
 | Skill | What it does |
 |-------|--------------|
 | `interactive-diagram` | Builds a self-contained interactive HTML diagram of any system: nested boundaries, status colors, numbered flows, pan/zoom, drill-down and a detail panel. Add `review` to go over it in lavish, `sketch` for an editable whiteboard, `draw` to draw it yourself with coaching |
-| `grill-me` | Interviews you one question at a time about a plan or design and saves every answer to `brainstorms/`. Questions that don't depend on each other go on one lavish page, recommended answers already picked |
+| `grill-me` | Interviews you one question at a time about a plan or design and saves every answer to `brainstorms/`. Questions that don't depend on each other come together in one round, recommended answers first; on a lavish page only if you ask |
 | `laymans` | Teaches a concept the Feynman way: plain language, ASCII diagrams, one honest analogy, a ladder from plain words to edge cases, or a coach mode where you explain it back and it finds the holes. Reference files on the ladder, analogies and failure modes load only when needed (MIT parts from guicortei/feynman-technique) |
 | `deepen` | Rewrites a request into the version a top professional would ask for, then stops |
 | `icm-architect` | Designs a process or body of knowledge as an ICM workspace, folder structure as agent architecture (MIT, by Jake Van Clief) |

@@ -1,10 +1,10 @@
 # Tools
 
-Read this when you make a review page, use GitHub or add a new tool. Each section says when to use the tool and gives the exact command.
+Read this when I ask for lavish, you use GitHub or you add a new tool. Each section says when to use the tool and gives the exact command.
 
 ## lavish: review pages
 
-Use lavish when a plan, a diagram, a table or a set of choices reads better as a page.
+Use lavish only when I ask for it, or when I pick a skill mode that uses it, such as `interactive-diagram review`. Do not open a lavish page for a plan, a diagram, a table or a set of choices on your own. Ask in the chat.
 
 - Open the page: `npx -y lavish-axi@0.1.93 <page.html>`
 - Get my answers: `npx -y lavish-axi@0.1.93 poll <page.html>`

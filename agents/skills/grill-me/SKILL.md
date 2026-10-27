@@ -36,9 +36,16 @@ Never batch multiple answers into one write. Checkpoint one answer at a time. Th
 - When the user **can't answer** something, capture it as a flag with the right owner and move on. Don't stall.
 - Keep going until the user says you're done, or you've covered every branch. Offer a completeness backstop near the end ("anything we haven't touched?").
 
-## Batch round (independent questions on one page)
+## Batch round (independent questions together)
 
-When the questions left don't depend on each other (no answer would change another question), ask them all at once on one page instead of one at a time. Keep asking one at a time while answers still shape the next question.
+When the questions left don't depend on each other (no answer would change another question), ask them together instead of one at a time. Keep asking one at a time while answers still shape the next question.
+
+- Ask up to 4 questions per round with your harness's question tool (in Claude Code: AskUserQuestion). Put your recommended answer first in each. Without such a tool, send them as a numbered list, each with your recommended answer.
+- Checkpoint one entry per answer right away, and mark the ones that differ from your recommendation.
+
+### On a lavish page (only when the user asks)
+
+Use a page only when the user asks for one or for lavish:
 
 1. Write the questions to `.lavish/grill-{topic-slug}/questions.json` in the working folder:
    ```json
@@ -51,7 +58,7 @@ When the questions left don't depend on each other (no answer would change anoth
 2. Build the page: `python3 <this skill>/kit/batch.py .lavish/grill-{topic-slug}/questions.json .lavish/grill-{topic-slug}/questions.html`. It uses the terminal's colors when `lavish-theme` is on PATH.
 3. Open it with `npx -y lavish-axi@0.1.93 <questions.html>`, then run `npx -y lavish-axi@0.1.93 poll <questions.html>` as a background job your harness tracks (in Claude Code: Bash with `run_in_background`). Never `nohup` or `&`. With no tracked background jobs, poll in the foreground.
 4. Every change on the page re-queues the whole set under one key, so what the user sends is what the page shows. The answers come back tagged `grill-batch`, one line per ID. Check that every ID is there, then checkpoint one entry per answer and mark the ones that differ from your recommendation.
-5. Without lavish (no Node, or the user isn't at a browser), the page's "Copy all answers" button copies the answers for them to paste into the chat. Or just ask the questions one at a time.
+5. Without lavish (no Node, or the user isn't at a browser), the page's "Copy all answers" button copies the answers for them to paste into the chat. Or ask in the chat as above.
 
 Never run `lavish-axi share`: it publishes the page on a public third-party site.
 
