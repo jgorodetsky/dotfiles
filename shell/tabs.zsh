@@ -1,16 +1,20 @@
 # ghostty tab titles by rule: "<status> <icon> <name>", so tabs can be told apart at a glance.
-#   🟢 at the prompt   🟡 something running   🔵 an agent (claude, codex, ...) and its folder   🔴 ssh, or a prod aws/kube context
+#   🟢 at the prompt   🟡 something running   🔵 an agent and its folder (opencode - api)   🔴 ssh, or a prod aws/kube context
 # tn <name> renames a tab and it keeps showing what runs in it: "🟡 🐍 api · python3".
 # in a prod context the whole tab also gets a blue tint. ghostty only; pairs with ghostty/tabs.conf.
 [[ $TERM_PROGRAM == ghostty ]] || return 0
 
-# claude code sets its own tab title; turn that off so the tab keeps these
+# claude code and opencode set their own tab titles; turn that off so the tab keeps these
 export CLAUDE_CODE_DISABLE_TERMINAL_TITLE=1
+export OPENCODE_DISABLE_TERMINAL_TITLE=1
 
 # an aws profile or kube context matching this pattern counts as prod
 : ${TABS_PROD_PATTERN:='*prod*'}
 # background color for prod tabs; set TABS_PROD_TINT= (empty) to turn the tint off
 : ${TABS_PROD_TINT='#12263f'}
+
+# agent harnesses: a 🔵 tab with the harness and its folder
+typeset -ga _tab_agents=(claude codex opencode pi gemini copilot cursor-agent aider amp crush goose)
 
 # program -> emoji. anything not listed gets the gear
 typeset -gA _tab_icons
@@ -21,7 +25,7 @@ _tab_icon '🌿'  gitfolder git ghh lazygit tig
 _tab_icon '🏠'  home
 _tab_icon '📝'  nvim vim vi nano
 _tab_icon '🐙'  gh
-_tab_icon '🤖'  claude codex opencode pi
+_tab_icon '🤖'  $_tab_agents
 _tab_icon '🐍'  python python3 ipython pip pip3 uv ruff
 _tab_icon '🐹'  go
 _tab_icon '📦'  node npm npx bun deno
@@ -83,12 +87,13 @@ _tab_precmd() {
 # while a command runs: its icon and name. skips env assignments and wrappers like sudo,
 # looks through aliases (k shows as kubectl), and shows the host for ssh
 _tab_preexec() {
-  local -a words=(${(z)1}) expanded; local w i dot name
+  local -a words=(${(z)1}); local w i dot name
   for (( i = 1; i <= $#words; i++ )); do
     w=$words[i]
     [[ $w == *=* || $w == (sudo|command|builtin|exec|nocorrect|noglob|time|env|nohup|caffeinate) ]] || break
   done
-  (( $+aliases[$w] )) && { expanded=(${(z)aliases[$w]}); w=$expanded[1]; }
+  # an alias can start with env assignments too: sgd is DELTA_FEATURES=... git diff
+  (( $+aliases[$w] )) && for w in ${(z)aliases[$w]}; do [[ $w == *=* ]] || break; done
   w=${${(Q)w}:t}
   name=$w
   if [[ $w == (ssh|mosh) ]]; then
@@ -101,12 +106,11 @@ _tab_preexec() {
     done
   fi
   [[ -n $_tab_name ]] && name="$_tab_name · $name"
-  # agents often run several at once, so their tabs show the folder (or tn name) instead
-  case $w in
-    claude|codex|opencode|pi) dot=🔵 name="${_tab_name:-${${PWD/#$HOME/~}:t}}" ;;
-    ssh|mosh)                 dot=🔴 ;;
-    *) (( _tab_in_prod )) && dot=🔴 || dot=🟡 ;;
-  esac
+  # agents often run several at once, so their tabs show the folder (or tn name): opencode - api
+  if (( ${_tab_agents[(Ie)$w]} )); then dot=🔵 name="$w - ${_tab_name:-${${PWD/#$HOME/~}:t}}"
+  elif [[ $w == (ssh|mosh) ]]; then dot=🔴
+  else (( _tab_in_prod )) && dot=🔴 || dot=🟡
+  fi
   _tab_title "$dot ${_tab_icons[$w]:-$_tab_icons[default]} $name"
 }
 

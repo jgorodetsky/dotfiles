@@ -207,13 +207,14 @@ Each tab's title shows a status dot, an icon for what's running, and a name:
 |-----|------|
 | 🟢 | at the prompt: folder name (🌿 inside a git repo, 🏠 at home) |
 | 🟡 | a command is running: its name (`k get pods` shows ☸️ kubectl) |
-| 🔵 | an agent is running (claude, codex, opencode, pi): the folder it runs in, so several agents can be told apart |
+| 🔵 | an agent is running: its name and the folder it runs in (`🔵 🤖 opencode - api`), so several agents can be told apart. pi sets its own title (`π - api`) and has no switch to turn that off |
 | 🔴 | ssh/mosh (shows the host), or the AWS profile or kube context looks like prod |
 
 In a prod context the tab also turns blue. `TABS_PROD_PATTERN` (default `*prod*`) decides what counts
 as prod and `TABS_PROD_TINT` sets the color (empty turns the tint off); set them in `~/.zshrc.local`.
 `tn <name>` renames a tab and keeps the program in the title; Ghostty's own rename (`ctrl+n` here)
-pins a fixed title instead. Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghostty.
+pins a fixed title instead. Claude Code's and OpenCode's own titles are turned off so these show.
+Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghostty.
 
 ## What's in it
 
