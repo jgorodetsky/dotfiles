@@ -54,11 +54,15 @@ gdh	alias		everything since the last commit, staged or not	gdh
 gdm	function			gdm; gdm --stat
 gcm	alias		commit with a message	gcm "fix login"
 gpf	alias		force push after an amend or rebase; refuses if someone else pushed meanwhile	gpf
-delta (git-delta)	tool	git's plain red/green diffs	draws every diff you read on screen: syntax colors, line numbers. nothing to type, it runs under gd, gds, lazygit	gds; sbs gds; n / N jump between files
+delta (git-delta)	tool	git's plain red/green diffs	draws every diff you read on screen: syntax colors, line numbers. nothing to type, it runs under gd, gds, lazygit	gds; sgds; n / N jump between files
 gsh	alias		the last commit and its diff; gsh <sha> for any commit	gsh; gsh HEAD~2
 glp	alias		history with each commit's diff	glp; glp file.py
 gap	alias		stage chunk by chunk: y yes, n no, q stop	gap
 gbl	alias		who last changed each line	gbl file.py
-sbs	alias		delta side by side for one command, in front of any diff alias	sbs gds; sbs gdm
+sgd	alias		gd side by side	sgd; sgd file.py
+sgds	alias		gds side by side	sgds
+sgdm	alias		gdm side by side	sgdm
+sgsh	alias		gsh side by side	sgsh; sgsh HEAD~2
+sglp	alias		glp side by side	sglp file.py
 lg	alias		git in a terminal window: files on the left, diff on the right, stage lines, commit, push	lg; | switches side by side
 cl	alias		clear	

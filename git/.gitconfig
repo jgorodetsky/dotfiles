@@ -22,7 +22,7 @@
 
 # diffs you read on screen are drawn by delta (brew git-delta): gd, gds, git show, git add -p, lazygit.
 # plain less when delta isn't installed. scripts and agents still get plain patches, since git only
-# runs the pager when output goes to a terminal. sbs <alias> shows one command side by side
+# runs the pager when output goes to a terminal. an s in front of a diff alias (sgds) shows it side by side
 [core]
 	pager = "if command -v delta >/dev/null 2>&1; then exec delta; else exec less; fi"
 [interactive]

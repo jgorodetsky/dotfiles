@@ -31,9 +31,13 @@ alias gsh='git show'
 alias glp='git log -p'
 alias gap='git add -p'
 alias gbl='git blame'
-# sbs <diff alias> - delta side by side for one command: sbs gds, sbs gdm. the trailing space
-# lets the alias after it expand
-alias sbs='DELTA_FEATURES=+side-by-side '
+# an s in front of a diff alias shows it side by side: sgd, sgds, sgdm, sgsh, sglp.
+# git add -p needs the plain layout and blame isn't a diff, so gap and gbl have none
+alias sgd='DELTA_FEATURES=+side-by-side git diff'
+alias sgds='DELTA_FEATURES=+side-by-side git diff --staged'
+alias sgdm='DELTA_FEATURES=+side-by-side gdm'
+alias sgsh='DELTA_FEATURES=+side-by-side git show'
+alias sglp='DELTA_FEATURES=+side-by-side git log -p'
 alias p3='python3'
 alias pwdc='pwd | pbcopy'
 

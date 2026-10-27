@@ -193,7 +193,7 @@ falls back to plain `less`. Set in `git/.gitconfig`.
 | `gsh` / `glp` | `git show` (last commit and its diff) / `git log -p` (history with diffs) |
 | `gap` / `gbl` | `git add -p` (stage chunk by chunk) / `git blame` |
 | `gcm` / `gpf` | `git commit -m` / `git push --force-with-lease --force-if-includes` (won't overwrite someone else's push) |
-| `sbs <alias>` | side by side for one command: `sbs gds`, `sbs gdm` |
+| `s` + alias | side by side: `sgd`, `sgds`, `sgdm`, `sgsh`, `sglp`. Not for `gap` (`git add -p` needs the plain layout) or `gbl` (blame isn't a diff) |
 | `lg` | lazygit: files on the left, diff on the right, stage single lines, commit, push. `\|` switches the diff to side by side |
 
 `lg` and Neovim's `space g g` use `lazygit/config.yml`, plus your own lazygit `config.yml` if you

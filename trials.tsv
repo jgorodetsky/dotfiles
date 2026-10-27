@@ -36,7 +36,7 @@
 35	ghostty tab rules	term	keep	shell/tabs.zsh, ghostty/tabs.conf	emoji status + icons by rule (tab-demo)
 36	OPINIONS.md	agent		dotfiles, on demand	your views, for judgment calls
 37	VOICE.md	agent		dotfiles, on demand	how you sound when it writes as you
-38	delta	git	keep	brew, git/.gitconfig, lazygit/config.yml	draws every diff: gd gds gdm gsh glp gap gbl, lazygit; sbs for side by side
+38	delta	git	keep	brew, git/.gitconfig, lazygit/config.yml	draws every diff: gd gds gdm gsh glp gap gbl, lazygit; an s in front (sgds) for side by side
 39	difftastic	git	dropped	brew, git dft alias	diffs by code structure, formatting-only changes drop out (diff demo 10-25)
 40	codediff.nvim	git	dropped	nvim plugin, nvd	vs code style diff inside nv, stage files; downloads 2 prebuilt binaries (diff demo 10-25)
 41	diffview.nvim (fork)	git	dropped	nvim plugin, nvd	diff + file history inside nv, stage files; pure lua (diff demo 10-25)
