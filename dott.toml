@@ -1,0 +1,271 @@
+# what dott sets up from this repo, and how it checks each item (https://github.com/jgorodetsky/dott).
+# dott only reads this Mac until you pick a fix; each fix shows its plan, asks once, backs up
+# what it changes and checks it again after. this Mac's own choices (optional groups, items
+# turned off, local skills) live in ~/.config/dott/config.toml, never here.
+schema = 1
+name = "dotfiles"
+
+[groups]
+aws = "the AWS CLI and one SSO login for every account (awssetup)"
+kube = "kubectl and helm"
+macos = "macOS settings: key repeat, file extensions, screenshots folder, cmd+1 apps, ctrl+opt tiling"
+ghostty-theme = "the ChessKing theme and board in Ghostty (only when you have no theme of your own)"
+
+[paths.ghostty-config]
+first_existing = ["~/Library/Application Support/com.mitchellh.ghostty/config", "${XDG_CONFIG_HOME:-~/.config}/ghostty/config"]
+
+[paths.git-ignore]
+gitconfig = "core.excludesFile"
+default = "${XDG_CONFIG_HOME:-~/.config}/git/ignore"
+
+[[item]]
+id = "brew"
+kind = "brew-bundle"
+section = "packages"
+desc = "the packages in the Brewfile"
+brewfile = "Brewfile"
+package_groups = { awscli = "aws", kubernetes-cli = "kube", helm = "kube" }
+outside_brew = { ghostty = "/Applications/Ghostty.app", visual-studio-code = "/Applications/Visual Studio Code.app" }
+
+[[item]]
+id = "shell-zprofile"
+kind = "block"
+section = "shell"
+desc = "the loader line in ~/.zprofile (PATH and env from the repo)"
+file = "~/.zprofile"
+start = "# >>> dotfiles >>>"
+end = "# <<< dotfiles <<<"
+body = '[ -f "{{repo}}/shell/.zprofile" ] && source "{{repo}}/shell/.zprofile"'
+
+[[item]]
+id = "shell-zshrc"
+kind = "block"
+section = "shell"
+desc = "the loader line in ~/.zshrc (the repo's shell setup)"
+file = "~/.zshrc"
+start = "# >>> dotfiles >>>"
+end = "# <<< dotfiles <<<"
+body = '[ -f "{{repo}}/shell/.zshrc" ] && source "{{repo}}/shell/.zshrc"'
+
+[[item]]
+id = "shell-sort"
+kind = "script"
+section = "shell"
+desc = "your other lines in ~/.zshrc and ~/.zprofile: drop what the repo does, move the rest to .local"
+when = { cmd = "zsh" }
+check = ["zsh", "{{repo}}/shell/sort.zsh", "--check"]
+plan = ["zsh", "{{repo}}/shell/sort.zsh", "--plan"]
+apply = ["zsh", "{{repo}}/shell/sort.zsh", "--apply"]
+
+[[item]]
+id = "git-include"
+kind = "include-line"
+section = "git"
+desc = "~/.gitconfig includes the repo's git settings (delta, aliases, credentials)"
+format = "gitconfig"
+file = "~/.gitconfig"
+line = "git/.gitconfig"
+
+[[item]]
+id = "git-ignore"
+kind = "include-line"
+section = "git"
+desc = "the global git ignore file has the lines in git/ignore"
+file = "@git-ignore"
+lines_from = "git/ignore"
+
+[[item]]
+id = "ghostty-tabs"
+kind = "block"
+section = "ghostty"
+desc = "tab titles by rule: status dot, emoji, name (shell/tabs.zsh + ghostty/tabs.conf)"
+when = { any = [{ app = "Ghostty" }, { cmd = "ghostty" }] }
+file = "@ghostty-config"
+start = "# >>> dotfiles tabs >>>"
+end = "# <<< dotfiles tabs <<<"
+body = "config-file = ?{{repo}}/ghostty/tabs.conf"
+
+[[item]]
+id = "ghostty-themes"
+kind = "copy"
+section = "ghostty"
+desc = "the ChessKing and cadillac themes, for gtheme and Ghostty"
+when = { any = [{ app = "Ghostty" }, { cmd = "ghostty" }] }
+from = "ghostty/themes"
+to = "${XDG_CONFIG_HOME:-~/.config}/ghostty/themes"
+
+[[item]]
+id = "gtheme"
+kind = "link"
+section = "ghostty"
+desc = "gtheme, the fuzzy theme picker, on PATH"
+when = { any = [{ app = "Ghostty" }, { cmd = "ghostty" }] }
+link = "~/.local/bin/gtheme"
+to = "ghostty/gtheme"
+
+[[item]]
+id = "ghostty-board"
+kind = "copy"
+section = "ghostty"
+desc = "the ChessKing board image"
+group = "ghostty-theme"
+when = { any = [{ app = "Ghostty" }, { cmd = "ghostty" }] }
+from = "ghostty/backgrounds"
+to = "${XDG_CONFIG_HOME:-~/.config}/ghostty/backgrounds"
+
+[[item]]
+id = "ghostty-theme"
+kind = "block"
+section = "ghostty"
+desc = "ChessKing as Ghostty's theme, added once and only when you have no theme line"
+group = "ghostty-theme"
+when = { any = [{ app = "Ghostty" }, { cmd = "ghostty" }] }
+needs = ["ghostty-board"]
+file = "@ghostty-config"
+mode = "seed"
+skip_if = '^\s*theme\s*='
+start = "# >>> ChessKing (managed) >>>"
+end = "# <<< ChessKing (managed) <<<"
+body = """
+theme = ChessKing
+background-image = ${XDG_CONFIG_HOME:-{{home}}/.config}/ghostty/backgrounds/ChessKing.png
+background-image-opacity = 0.6
+background-image-position = center
+background-image-fit = cover
+background-image-repeat = false
+"""
+
+[[item]]
+id = "nvim"
+kind = "link"
+section = "editor"
+desc = "neovim config (lazyvim): ~/.config/nvim links to nvim/"
+link = "${XDG_CONFIG_HOME:-~/.config}/nvim"
+to = "nvim"
+after = ["nvim", "--headless", "+Lazy! restore", "+qa"]
+
+[[item]]
+id = "skills"
+kind = "skills"
+section = "agents"
+desc = "agent skills via npx skills: one copy in ~/.agents/skills, a link for claude"
+needs = ["brew:node"]
+sources = ["agents/skills"]
+home = "~/.agents/skills"
+claude_links = "~/.claude/skills"
+installer = ["npx", "-y", "skills@1.7.4", "add"]
+env = { DISABLE_TELEMETRY = "1", NO_COLOR = "1" }
+agents = ["codex", "opencode", "github-copilot", "pi", "cursor", "gemini-cli"]
+protect = ["~/.claude/skills/synced"]
+validator = ["uvx", "--quiet", "--from", "skills-ref==0.1.1", "agentskills", "validate"]
+legacy_record = "${XDG_CACHE_HOME:-~/.cache}/dotfiles/skills.sync"
+
+[[item]]
+id = "rules"
+kind = "rules"
+section = "agents"
+desc = "one AGENTS.md for every agent tool"
+source = "agents/AGENTS.md"
+targets = [
+  { tool = "claude", method = "import", file = "~/.claude/CLAUDE.md", start = "<!-- >>> dotfiles >>> -->", end = "<!-- <<< dotfiles <<< -->", when = { any = [{ dir = "~/.claude" }, { cmd = "claude" }] } },
+  { tool = "codex", method = "link", file = "${CODEX_HOME:-~/.codex}/AGENTS.md", when = { any = [{ dir = "${CODEX_HOME:-~/.codex}" }, { cmd = "codex" }] } },
+  { tool = "pi", method = "link", file = "~/.pi/agent/AGENTS.md", when = { any = [{ dir = "~/.pi" }, { cmd = "pi" }] } },
+  { tool = "copilot", method = "link", file = "~/.copilot/copilot-instructions.md", when = { any = [{ dir = "~/.copilot" }, { cmd = "copilot" }] } },
+  { tool = "opencode", method = "link", file = "${XDG_CONFIG_HOME:-~/.config}/opencode/AGENTS.md", when = { any = [{ dir = "${XDG_CONFIG_HOME:-~/.config}/opencode" }, { cmd = "opencode" }] } },
+  { tool = "gemini", method = "link", file = "~/.gemini/GEMINI.md", when = { any = [{ dir = "~/.gemini" }, { cmd = "gemini" }] } },
+]
+
+[[item]]
+id = "claude"
+kind = "script"
+section = "agents"
+desc = "Claude Code, native install (it updates itself)"
+present = "claude"
+plan_text = ["install Claude Code with its own installer: curl -fsSL https://claude.ai/install.sh | bash"]
+apply = ["bash", "-c", "curl -fsSL https://claude.ai/install.sh | bash"]
+
+[[item]]
+id = "macos"
+kind = "script"
+section = "macos"
+desc = "key repeat, file extensions, screenshots, cmd+1 apps, ctrl+opt+arrow tiling"
+group = "macos"
+when = { os = "darwin" }
+check = ["bash", "{{repo}}/macos/defaults.sh", "--check"]
+plan = ["bash", "{{repo}}/macos/defaults.sh", "--plan"]
+apply = ["bash", "{{repo}}/macos/defaults.sh"]
+
+[[item]]
+id = "aws"
+kind = "script"
+section = "cloud"
+desc = "aws sso: one login, a profile for every account you can reach (awssetup)"
+group = "aws"
+needs = ["brew:awscli"]
+interactive = true
+check = ["bash", "{{repo}}/bin/awssetup", "--check"]
+plan_text = ["run awssetup: it asks for your SSO start URL, opens the browser to log in, then writes a profile per account"]
+apply = ["{{repo}}/bin/awssetup"]
+
+[aliases]
+repo_file = "shell/.zshrc"
+local_file = "~/.zshrc.local"
+header = "# aliases added with dott"
+before = "^# machine-specific config"
+notes = "shell/mine.tsv"
+search = ["shell/.zshrc", "~/.zshrc.local", "~/.zshrc", "shell/.zprofile", "~/.zprofile.local"]
+
+[[edit]]
+name = "shell"
+file = "shell/.zshrc"
+desc = "every machine, interactive shell"
+
+[[edit]]
+name = "profile"
+file = "shell/.zprofile"
+desc = "every machine, login shell (PATH, env)"
+
+[[edit]]
+name = "local"
+file = "~/.zshrc.local"
+desc = "this Mac only, loads last"
+
+[[edit]]
+name = "git"
+file = "git/.gitconfig"
+desc = "git settings for every machine"
+
+[[edit]]
+name = "brew"
+file = "Brewfile"
+desc = "the packages"
+
+[[edit]]
+name = "mine"
+file = "shell/mine.tsv"
+desc = "notes for the mine table"
+
+[[edit]]
+name = "nvim"
+file = "nvim"
+desc = "the editor config"
+
+[[edit]]
+name = "ghostty"
+file = "ghostty/tabs.conf"
+desc = "Ghostty tab rules"
+
+[[edit]]
+name = "rules"
+file = "agents/AGENTS.md"
+desc = "the rules every agent tool reads"
+
+[[edit]]
+name = "skills"
+file = "agents/skills"
+desc = "the skills; fix skills installs them"
+
+[[edit]]
+name = "dott"
+file = "dott.toml"
+desc = "this list of items"

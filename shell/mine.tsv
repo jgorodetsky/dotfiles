@@ -21,7 +21,7 @@ tldr	tool	man / --help	5-8 real examples for any public command (mine is for you
 mine	function		this table: your tools, keys, aliases and functions. type to filter when it's long	mine; mine aws; mine cd; mine --edit
 alias	function	alias (plain list)	with nothing after it, shows your aliases as a table; piped or with arguments it is the normal alias	alias; alias | grep git
 boxtable	tool		draws any tab-separated text as a boxed table that fits the screen; tall tables open searchable	printf 'a\tb\n1\t2\n' | boxtable
-dot	tool		this setup's front door: what needs you and what's wired to the repo; dot fix installs (skills and agent rules too), dot alias adds an alias, dot edit opens the right file	dot; dot fix; dot alias gl 'git log --oneline -20'; dot edit rules
+dott	tool		this setup's front door: every item and its state, and the fixes; type any words to filter (dott aws, dott drift)	dott; dott fix; dott add alias; dott edit rules
 lavish-theme	tool		prints the <head> lines for a lavish review page in Ghostty's colors (daisyui theme)	lavish-theme | head -3
 awssetup	tool	hand-editing ~/.aws/config	one-time aws sso setup: a profile for every account + role	awssetup
 awslogin	function	export AWS_PROFILE=...	pick an aws profile for this shell, logs in only if expired	awslogin; awslogin dev-readonly

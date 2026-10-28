@@ -1,4 +1,4 @@
-# stow backups made by install.sh
+# backups left by an older version of the installer
 *.pre-dotfiles.bak
 
 # macos

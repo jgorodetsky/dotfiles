@@ -217,7 +217,7 @@ _bp="${HOMEBREW_PREFIX:-/opt/homebrew}/share"
 # ghostty tabs: "<status> <icon> <name>" titles by rule, tn to rename (does nothing outside ghostty)
 [ -f "$DOTFILES_SHELL/tabs.zsh" ] && source "$DOTFILES_SHELL/tabs.zsh"
 
-# aliases added with dot alias
+# aliases added with dott
 alias cl='clear'
 
 # machine-specific config, loaded after everything above so it wins

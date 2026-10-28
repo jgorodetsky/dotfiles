@@ -1,6 +1,27 @@
 #!/usr/bin/env bash
-# minimal, uncontroversial macos defaults. opt-in — run it yourself or via install.sh.
+# minimal, uncontroversial macos defaults. opt-in: run it yourself, or turn on the macos group in dott.
+#   defaults.sh           apply them
+#   defaults.sh --check   exit 0 when applied, 1 when not (only reads)
+#   defaults.sh --plan    what applying does, one line each
 set -euo pipefail
+
+# hk ID JSON - hotkey ID has these parameters
+hk(){ [ "$(defaults export com.apple.symbolichotkeys - 2>/dev/null | plutil -extract "AppleSymbolicHotKeys.$1.value.parameters" json -o - - 2>/dev/null)" = "$2" ]; }
+case "${1:-}" in
+  --check)
+    if [ "$(defaults read -g KeyRepeat 2>/dev/null || echo x)" = 2 ] && hk 160 "[49,18,1048576]" && hk 240 "[65535,123,9175040]"; then
+      echo "KeyRepeat=2, cmd+1 apps, ctrl+opt tiling (applied)"; exit 0
+    fi
+    echo "settings not applied"; echo "apply them"; exit 1 ;;
+  --plan)
+    printf '%s\n' "faster key repeat (InitialKeyRepeat 15, KeyRepeat 2; takes effect after a re-login)" \
+      "show all file extensions in Finder" "save screenshots to ~/Screenshots" \
+      "cmd+1 opens the apps launcher (it takes over cmd+1 in every app)" "ctrl+opt+left/right tiles a window to half the screen" \
+      "first run only: the old values go to ~/.dotfiles-macos-defaults.bak; then Finder and SystemUIServer restart"
+    exit 0 ;;
+  "") ;;
+  *) echo "usage: defaults.sh [--check|--plan]" >&2; exit 2 ;;
+esac
 
 # first run only: save the values this script changes, so they can be restored by hand
 BAK="$HOME/.dotfiles-macos-defaults.bak"

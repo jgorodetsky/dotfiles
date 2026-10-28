@@ -13,9 +13,9 @@ Every skill goes through the same four steps, in this order:
    - Keep `SKILL.md` under 500 lines. Put longer material in `references/`, `scripts/` or `assets/`.
 2. **Write or change it** with Anthropic's skill-creator (the `skill-creator` skill in Claude Code).
 3. **Validate:** `uvx --from skills-ref==0.1.1 agentskills validate <skill-folder>` has to pass.
-4. **Install** only through `dot` (`dot fix`, then skills). It looks for edits in the installed copies, then runs `npx skills@1.7.4` with `DISABLE_TELEMETRY=1`. Do not run `npx skills add` for these skills yourself. Do not edit the copies in `~/.agents/skills` or `~/.claude/skills`. Change the source, then install again.
+4. **Install** only through `dott` (the `fix skills` row). It looks for edits in the installed copies, then runs `npx skills@1.7.4` with `DISABLE_TELEMETRY=1`. Do not run `npx skills add` for these skills yourself. Do not edit the copies in `~/.agents/skills` or `~/.claude/skills`. Change the source, then install again.
 
-Public skills live in the dotfiles repo under `agents/skills/`. Private skills live in `~/engine/skills/` and never go in the public repo.
+Public skills live in the dotfiles repo under `agents/skills/`. Private skills live in a folder outside the repo. Each Mac names that folder in its own `~/.config/dott/config.toml` (`[local] skills`). Private skills never go in the public repo.
 
 A skill from another author keeps its `LICENSE` and gets an `UPSTREAM` file. The file gives the author, the source, the date and each change that you made.
 

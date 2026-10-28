@@ -1,9 +1,10 @@
-# packages installed by brew bundle. install.sh reads this file to build its health-check.
-# format per line:  brew|cask "name"   # short description  (install.sh parses both).
+# the packages dott installs (its brew item). dott shows the comment after each one.
+# format per line:  brew|cask "name"   # short description
 # third-party formulae use their full name + trusted: true so homebrew 6+ will load them.
 
 tap "hashicorp/tap"
 tap "jgorodetsky/ghh"
+tap "jgorodetsky/dott"
 
 # core-cli
 brew "gh"        # GitHub CLI
@@ -41,6 +42,7 @@ brew "node"             # runs the language servers neovim installs (pyright, ba
 
 # tools
 brew "jgorodetsky/ghh/ghh", trusted: true  # git + GitHub workflow (your tap)
+brew "jgorodetsky/dott/dott", trusted: true  # this setup's picker: every item, its state, the fixes
 
 # apps
 cask "ghostty"                                    # terminal

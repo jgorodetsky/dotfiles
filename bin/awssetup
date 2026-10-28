@@ -8,6 +8,7 @@
 # pick up new accounts; your previous answers become the defaults.
 #
 #   awssetup          interactive setup / refresh
+#   awssetup --check  exit 0 when it was set up, 1 when not (only reads; dott uses it)
 #   awssetup --help   this text
 set -euo pipefail
 
@@ -19,8 +20,10 @@ else B= D= G= Y= X=; fi
 
 case "${1:-}" in
   -h|--help) sed -n '2,/^set -euo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
+  --check) if grep -qs '^\[sso-session ' "$CFG"; then echo "$(grep -c '^\[profile ' "$CFG") profiles in ${CFG/#$HOME/~}"; exit 0; fi
+           echo "never set up"; echo "run awssetup"; exit 1 ;;
   "") ;;
-  *) echo "usage: awssetup [--help]" >&2; exit 2 ;;
+  *) echo "usage: awssetup [--check|--help]" >&2; exit 2 ;;
 esac
 
 for c in aws jq; do

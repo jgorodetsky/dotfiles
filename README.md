@@ -3,60 +3,47 @@
 My macOS setup: shell, git, Homebrew packages, Ghostty terminal themes and tabs, Neovim, and AI agent skills
 that work in Claude Code, Codex, Cursor, Gemini CLI, OpenCode, GitHub Copilot and pi.
 
-`./install.sh` (later: `dot fix`) checks what's already set up, sorts the lines your shell files
-already have, and installs what's missing. It never replaces your existing files. See
-[Never overwrites](#never-overwrites).
+[dott](https://github.com/jgorodetsky/dott) checks what's already set up, sorts the lines your
+shell files already have, and installs what's missing. It never replaces a file of yours without
+asking. See [Never overwrites](#never-overwrites).
 
 ## Install
 
 ```bash
-git clone https://github.com/jgorodetsky/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-./install.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/jgorodetsky/dotfiles/main/install.sh)"
 ```
 
-`./install.sh` runs on its own screen (like vim) in four steps, one decision per screen, and
-leaves a short receipt in your terminal when it's done:
+It installs Homebrew if it's missing (Homebrew asks for your Mac password once), then dott from
+its tap, then runs `dott --init jgorodetsky/dotfiles`: that clones this repo to `~/dotfiles` and
+opens the picker. In a clone, `./install.sh` does the same with that folder.
 
-```
- ✓ check ━━ ● shell ━━ ○ pick ━━ ○ install
-```
-
-1. **check** - what needs you (why, and what to do), with everything that's fine folded into one
-   line per group
-2. **shell** - the lines in `~/.zshrc` / `~/.zprofile` besides the loader, in three boxes:
-   delete (the repo has them), move (only yours, to `~/.zshrc.local`), you pick (same job under
-   another name, a clash, or something destructive). Then merge / keep / overwrite, a question for
-   each line in the third box, a check that your shell behaves the same, and a yes before writing
-3. **pick** - fix what needs it (already selected), choose items from the full list, upgrade, or nothing
-4. **install** - one line per item with a spinner; the full output goes to `~/.cache/dotfiles/`
-
-Arrow keys and enter answer everything; `q` stops at any step.
-
-- `./install.sh --all` - fix everything that needs it, no questions (shell lines merged with the
-  safe choices)
-- `./install.sh --check` - the check screen only, changes nothing
-- `./install.sh --only shell,skills` - (re)apply just those features
+dott asks once about the optional parts (AWS, kube, the macOS settings, the ChessKing theme), then
+lists every item with its state. Pick `fix everything` to set up what's missing: it shows the
+plan, asks once, backs up what it changes and checks each item after. Things of your own (your
+own `~/.config/nvim`, a rules file of a tool's own) stay as they are until you pick `resolve` for
+them. Without a terminal, `dott fix everything --yes` does the same and never replaces yours.
 
 Safe to re-run and safe to `git pull` over an existing setup.
 
 ## Never overwrites
 
-| Feature | What it does to your machine |
+| Item | What it does to your machine |
 |---------|------------------------------|
-| `shell` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files, and never adds it twice. Lines you already had are shown grouped by where they'd go, and you pick: **merge** (ones the repo already does are deleted, yours move to `~/.zshrc.local`, an alias the repo has under another name or a clash asks you), **keep** the file as it is, or **overwrite** (loader only; your lines stay in the backup). Before writing it loads your shell both ways and shows anything that would behave differently. Backups are `.bak-<timestamp>`. Re-running from another checkout (a worktree, say) points the block at that checkout. Older installs that symlinked these files get your original file back first. |
-| `git` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. Adds the lines in `git/ignore` (`.lavish/`, `.playwright-mcp/`) that your global ignore file (`~/.config/git/ignore`, or your `core.excludesFile`) doesn't have yet, and keeps the rest. |
-| `ghostty-theme` | Appends a marked block to your Ghostty config. If you already have a different theme file or `gtheme` with the same name, yours is kept as `<file>.bak-<timestamp>`. |
-| `ghostty-tabs` | Appends a marked block to your Ghostty config that loads `ghostty/tabs.conf`. Same re-pointing rule as `shell`. |
-| `nvim` | Links `~/.config/nvim` to `nvim/`. An existing `~/.config/nvim` of your own is kept as `~/.config/nvim.bak-<timestamp>`. |
-| `skills` | Installs the skills with `npx skills@1.7.4` (telemetry off): one copy in `~/.agents/skills` and a link to it in `~/.claude/skills`. npx skills overwrites without asking, so dot checks first: each install is recorded in `~/.cache/dotfiles/skills.sync`, so it can tell a repo update (installed on its own) from your edits to an installed copy (it asks: keep yours, take the source, or merge in nv). Skills that fail the spec check aren't installed. A copy it replaces is saved in `~/.cache/dotfiles/skills-bak-<timestamp>` first, outside the skill folders so it doesn't load as a second skill. |
-| `rules` | Appends a marked block with `@<repo>/agents/AGENTS.md` to `~/.claude/CLAUDE.md` (your own lines stay), and links `~/.codex/AGENTS.md`, `~/.pi/agent/AGENTS.md`, `~/.copilot/copilot-instructions.md` and `~/.config/opencode/AGENTS.md` to `agents/AGENTS.md` for the tools that are installed. A tool with a file of its own asks: keep it, replace it (saved to `~/.cache/dotfiles/rules-bak-<timestamp>`), or merge in nv. |
-| `macos` | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
+| `shell-zprofile`, `shell-zshrc` | Appends one marked block to `~/.zprofile` and `~/.zshrc` that sources the repo files, and never adds it twice. A block from another checkout (a worktree, say) is pointed at this one. |
+| `shell-sort` | The lines you already had besides the loader: the ones the repo already does are deleted, yours move to `~/.zshrc.local` / `~/.zprofile.local`, and a line that clashes with the repo stays there commented out (the repo's wins). The plan lists the counts first; a `.bak-<timestamp>` of each file goes next to it. |
+| `git-include`, `git-ignore` | Appends an `[include]` of `git/.gitconfig` to `~/.gitconfig`. Your identity and settings stay yours. Adds the lines in `git/ignore` (`.lavish/`, `.playwright-mcp/`) that your global ignore file (`~/.config/git/ignore`, or your `core.excludesFile`) doesn't have yet, and keeps the rest. |
+| `ghostty-tabs` | Appends a marked block to your Ghostty config that loads `ghostty/tabs.conf`. |
+| `ghostty-themes`, `gtheme` | Copies the themes to `~/.config/ghostty/themes` and links `~/.local/bin/gtheme` to `ghostty/gtheme`. A theme file you changed is yours: it is left alone until you pick `resolve`. |
+| `ghostty-theme` (optional) | Adds the ChessKing block to your Ghostty config once, and only when your config has no `theme =` line of its own. |
+| `nvim` | Links `~/.config/nvim` to `nvim/`. An `~/.config/nvim` of your own is left alone: `resolve nvim` keeps it (the item turns off), replaces it (yours goes to the backup first), or compares the two. |
+| `skills` | Installs the skills with `npx skills@1.7.4` (telemetry off): one copy in `~/.agents/skills` and a link to it in `~/.claude/skills`. npx skills overwrites without asking, so dott checks first: each install is recorded in `~/.local/state/dott` (it still reads the old `~/.cache/dotfiles/skills.sync`), so it can tell a repo update (installed with fix) from your edits to an installed copy (yours until you pick `resolve`). Skills that fail the spec check aren't installed. `~/.claude/skills/synced` is never touched. |
+| `rules` | Appends a marked block with `@<repo>/agents/AGENTS.md` to `~/.claude/CLAUDE.md` (your own lines stay), and links `~/.codex/AGENTS.md`, `~/.pi/agent/AGENTS.md`, `~/.copilot/copilot-instructions.md`, `~/.config/opencode/AGENTS.md` and `~/.gemini/GEMINI.md` to `agents/AGENTS.md`, for the tools that are installed. A tool with a file of its own keeps it until you pick `resolve`. |
+| `macos` (optional) | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
-| `aws` | Runs `awssetup`, which writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
-| packages | `brew bundle` only adds. Nothing is uninstalled. |
-| tap trust | Every run trusts the Brewfile entries marked `trusted: true` (Homebrew 6+ refuses third-party formulae until they're trusted). Only those exact formulae, not the whole tap. |
+| `aws` (optional) | Runs `awssetup`, which asks its own questions and writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
+| `brew` | Installs the Brewfile's packages that are missing. Nothing is uninstalled or upgraded. Entries marked `trusted: true` are trusted first (Homebrew 6+ refuses third-party formulae until they are): only those exact formulae, not the whole tap. awscli, kubectl and helm are in the optional groups. |
 
+Every fix backs up what it changes to `~/.local/state/dott/backups`; `restore a backup` puts it back.
 To remove the shell layer, delete the `# >>> dotfiles >>>` block from `~/.zshrc` and `~/.zprofile`.
 
 ## Machine-specific config
@@ -74,29 +61,29 @@ repo files load them last so they win over anything defined here.
 ```
 
 Lines that show up in `~/.zshrc` later (an installer appending `export PATH=...`) are fine; the
-next `./install.sh` shows them under `shell` and sorts them the same way.
+next `dott` shows them as `shell-sort` and sorts them the same way.
 
-`dot` is the front door once it's installed:
+`dott` is the front door. Type any words after it to filter, like `dott aws` or `dott drift`:
 
-- `dot` - the check screen, then what's wired to the repo (`→` follows the repo on every pull,
-  `(copied)` only changes when `dot fix` runs), then a "what now?" menu with the likely next step
-  selected: fix, upgrade, add or remove an alias, open a file
-- `dot fix` - the installer above
-- `dot upgrade` - newer versions of what you installed, as tick boxes. Your Brewfile packages
-  come first. A new major version, or a minor bump of terraform or kubectl (where versions
-  have to match your state files or clusters), starts unticked with the reason next to it.
-  If Xcode's command line tools are too old for brew to install with, it says so first and can
-  update just the tools (Homebrew's own method: no macOS update, no restart, asks for your
-  password) or open Software Update. It uses brew's own version info (refreshed about daily) unless you pick
-  refresh
-- `dot alias NAME 'COMMAND'` - add an alias. It tells you if the name is taken or the command
-  already has a name, then asks: every machine (the repo's `shell/.zshrc`, an optional note for
-  `mine`, then offers to commit) or this Mac only (`~/.zshrc.local`)
-- `dot alias -d NAME` - remove an alias. It finds every file that sets it and asks where: one of
-  those files, all of them, or (for one the repo sets) only on this Mac, which adds an `unalias`
-  line to `~/.zshrc.local` and leaves the repo alone
-- `dot edit [shell|local|profile|git|brew|mine|nvim|ghostty|rules|skills]` - open the file you'd change
-- `dot update` - `git pull --ff-only`, then `dot fix`
+- `dott` - every item and its state, then the rows that act on them
+- `fix everything` - what drifted; your own things and the items that ask questions are left to you
+- `upgrade` - newer versions of what you installed. Your Brewfile packages come first. A new
+  major version, or a minor bump of terraform or kubectl (where versions have to match your state
+  files or clusters), needs a typed yes, with the reason next to it. If Xcode's command line tools
+  are too old for brew to build with, it says so and prints the commands (dott never runs sudo).
+  It uses brew's own version info (refreshed about daily) unless you pick refresh
+- `add alias` - it tells you if the name is taken or the command already has a name, then asks:
+  every machine (the repo's `shell/.zshrc`, an optional note for `mine`, then offers to commit
+  only that line) or this Mac only (`~/.zshrc.local`)
+- `remove alias` - it finds every file that sets it and asks where: one of those files, all of
+  them, or (for one the repo sets) only on this Mac, which adds an `unalias` line to
+  `~/.zshrc.local` and leaves the repo alone
+- `edit shell` (also `local`, `profile`, `git`, `brew`, `mine`, `nvim`, `ghostty`, `rules`, `skills`, `dott`) - open the file you'd change
+- `refresh` - shows the incoming commits, the items they touch and the diff of every changed
+  script, then pulls and fixes after one yes
+- `permissions claude` (also codex, opencode, pi) - what each agent may do without asking, risky rules flagged; read-only
+- `summary` - the counts, what needs you, and optional clean-ups (git settings you also set in
+  the repo, packages the Brewfile doesn't list)
 
 If the machine already has an oh-my-zsh theme or powerlevel10k, the starship prompt is skipped,
 and a `~/.config/starship.toml` of your own is used instead of the repo's.
@@ -220,11 +207,11 @@ Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghos
 
 | Path | What |
 |------|------|
-| `Brewfile` | packages (cli, prompt, cloud, languages, terminal, editor); also the source for the health check |
-| `install.sh` | health check + installer |
-| `shell/adopt.zsh` | sorts the lines a machine already has in `~/.zshrc` / `~/.zprofile` (used by install.sh) |
-| `bin/dot` | the front door: check + what's wired up, `dot fix`, `dot alias`, `dot edit`, `dot update` |
-| `lib/ui.sh` | the installer's screens: its own screen, step bar, arrow-key menus, spinner rows |
+| `dott.toml` | every item [dott](https://github.com/jgorodetsky/dott) sets up, and how it checks each one |
+| `install.sh` | the one-line bootstrap: Homebrew, dott, then `dott --init` |
+| `Brewfile` | packages (cli, prompt, cloud, languages, terminal, editor); dott's `brew` item reads it |
+| `shell/adopt.zsh` | sorts the lines a machine already has in `~/.zshrc` / `~/.zprofile` |
+| `shell/sort.zsh` | the `shell-sort` item: adopt.zsh as a check, a plan and a merge |
 | `shell/.zprofile` | login env: Homebrew + PATH (kept unique) |
 | `shell/.zshrc` | completions, aliases, fzf/zoxide/eza/bat, aws + kube helpers, prompt, plugins |
 | `shell/starship.toml` | prompt layout |
@@ -235,11 +222,10 @@ Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghos
 | `bin/mine-table`, `shell/mine.tsv` | the engine behind `mine`, and the tools/keys/notes it adds to your aliases and functions |
 | `bin/boxtable` | draws tab-separated text as a boxed table (used by mine and alias) |
 | `bin/lavish-theme` | prints the `<head>` lines for a lavish page in Ghostty's colors (a DaisyUI theme) |
-| `lib/agents.sh` | the skills and rules steps: spec check, edit detection, npx skills, links |
 | `git/ignore` | lines added to your global git ignore file |
 | `git/.gitconfig` | git behavior only, no identity (see below); delta draws diffs |
 | `lazygit/config.yml` | lazygit settings: delta diffs, side by side on `\|` |
-| `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer) |
+| `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer); `--check` and `--plan` for dott |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |
 | `generator/` | re-renders the ChessKing board image |
 | `agents/skills/` | AI agent skills (below) |
@@ -252,13 +238,14 @@ in the next terminal.
 ## Agent skills
 
 Skills use the open [Agent Skills](https://agentskills.io/specification) format (a folder with a
-`SKILL.md`), so one copy works in every harness. `dot fix` installs them with `npx skills`:
+`SKILL.md`), so one copy works in every harness. `dott` installs them with `npx skills`:
 
 - `~/.agents/skills` - the one real copy. Codex, OpenCode, GitHub Copilot, pi, Cursor and Gemini CLI read it here
 - `~/.claude/skills/<name>` - a link to it, for Claude Code
 
-Public skills live in `agents/skills/`. Private ones live in `~/engine/skills/` (outside this
-repo) and install the same way when that folder exists.
+Public skills live in `agents/skills/`. Skills that belong to one Mac live outside this repo:
+that Mac's `~/.config/dott/config.toml` names the folder (`[local] skills = [...]`), and dott
+installs them the same way, marked local.
 
 | Skill | What it does |
 |-------|--------------|
@@ -275,7 +262,7 @@ skill up when you name it or when your request matches its description.
 
 Every skill follows the spec, is written with Anthropic's skill-creator, and passes
 `uvx --from skills-ref==0.1.1 agentskills validate <folder>`. Edit them in `agents/skills/`
-(`dot edit skills`), then run `dot fix` (or `./install.sh --only skills`).
+(`dott edit skills`), then pick `fix skills`.
 
 ## Agent rules
 
@@ -284,14 +271,14 @@ answer, how to work, and a "Read when" table that points to `agents/docs/` for r
 some tasks need (git, Terraform, tools, skills, long answers). Tone stays in AGENTS.md itself,
 since an agent opens a routed file only when it decides to.
 
-`dot fix` (the `rules` item) connects it: an `@import` line in `~/.claude/CLAUDE.md` for Claude
-Code, and links for Codex, pi, Copilot and OpenCode. Change it with `dot edit rules`; every tool
+dott (the `rules` item) connects it: an `@import` line in `~/.claude/CLAUDE.md` for Claude
+Code, and links for Codex, pi, Copilot, OpenCode and Gemini CLI. Change it with `dott edit rules`; every tool
 sees the change in its next session. Agent-facing text is written in STE-flavored English and
 checked with the `asd-ste100` skill's linter.
 
 ## Git identity
 
-`install.sh` adds an `[include]` of this repo's `git/.gitconfig` to your real `~/.gitconfig`.
+dott adds an `[include]` of this repo's `git/.gitconfig` to your real `~/.gitconfig`.
 It never replaces or symlinks that file, so global git writes never land in the repo. Set
 identity the normal way:
 
