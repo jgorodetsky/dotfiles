@@ -7,21 +7,38 @@ that work in Claude Code, Codex, Cursor, Gemini CLI, OpenCode, GitHub Copilot an
 shell files already have, and installs what's missing. It never replaces a file of yours without
 asking. See [Never overwrites](#never-overwrites).
 
-## Install
+## Setup and updates
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/jgorodetsky/dotfiles/main/install.sh)"
 ```
 
-It installs Homebrew if it's missing (Homebrew asks for your Mac password once), then dott from
-its tap, then runs `dott --init jgorodetsky/dotfiles`: that clones this repo to `~/dotfiles` and
-opens the picker. In a clone, `./install.sh` does the same with that folder.
+```
+install.sh                                   every day after
+  1  Homebrew, if it is missing                dott
+     (it asks for your Mac password once)        the header says when GitHub has new commits:
+  2  dott, from its Homebrew tap                 ↑ origin/main has new commits: pick refresh
+  3  dott --init jgorodetsky/dotfiles              │
+     clones this repo to ~/dotfiles                ▼
+  4  dott asks once about the optional parts   refresh
+     (AWS, kube, the macOS settings, the         the new commits, the items they touch and
+     ChessKing theme)                            the diff of every changed script
+        │                                          │ Pull? [Y/n]
+        ▼                                          ▼
+     fix everything                            git pull --ff-only, then the fix plan
+                                                 and its own Run it? [Y/n/copy]
+```
 
-dott asks once about the optional parts (AWS, kube, the macOS settings, the ChessKing theme), then
-lists every item with its state. Pick `fix everything` to set up what's missing: it shows the
-plan, asks once, backs up what it changes and checks each item after. Things of your own (your
-own `~/.config/nvim`, a rules file of a tool's own) stay as they are until you pick `resolve` for
-them. Without a terminal, `dott fix everything --yes` does the same and never replaces yours.
+In a clone, `./install.sh` does the same with that folder.
+
+`fix everything` sets up what's missing: it shows the plan, asks once, backs up what it changes
+and checks each item after. Things of your own (your own `~/.config/nvim`, a rules file of a
+tool's own) stay as they are until you pick `resolve` for them. Without a terminal,
+`dott fix everything --yes` does the same and never replaces yours.
+
+The update check asks GitHub with `git ls-remote`: it fetches nothing, never asks for a password,
+and gives up after 5 seconds, so offline there is no notice and no wait. dott itself updates with
+Homebrew (the `upgrade` row, or `brew upgrade dott`).
 
 Safe to re-run and safe to `git pull` over an existing setup.
 
@@ -65,25 +82,29 @@ next `dott` shows them as `shell-sort` and sorts them the same way.
 
 `dott` is the front door. Type any words after it to filter, like `dott aws` or `dott drift`:
 
-- `dott` - every item and its state, then the rows that act on them
+- `dott` - what needs you, then every item and its state, then the tools. Enter on an item opens
+  it: where it lives here and in the repo (a file opens in your editor), its parts, its fix, its
+  entry in `dott.toml`, and turn off. Esc goes back one screen, ctrl-c quits
+- `optional parts` - turn AWS, kube, the macOS settings or the ChessKing theme on or off
 - `fix everything` - what drifted; your own things and the items that ask questions are left to you
 - `upgrade` - newer versions of what you installed. Your Brewfile packages come first. A new
   major version, or a minor bump of terraform or kubectl (where versions have to match your state
   files or clusters), needs a typed yes, with the reason next to it. If Xcode's command line tools
   are too old for brew to build with, it says so and prints the commands (dott never runs sudo).
   It uses brew's own version info (refreshed about daily) unless you pick refresh
-- `add alias` - it tells you if the name is taken or the command already has a name, then asks:
+- `add alias` (under `add`, with `add skill`) - it tells you if the name is taken or the command already has a name, then asks:
   every machine (the repo's `shell/.zshrc`, an optional note for `mine`, then offers to commit
   only that line) or this Mac only (`~/.zshrc.local`)
 - `remove alias` - it finds every file that sets it and asks where: one of those files, all of
   them, or (for one the repo sets) only on this Mac, which adds an `unalias` line to
   `~/.zshrc.local` and leaves the repo alone
 - `edit shell` (also `local`, `profile`, `git`, `brew`, `mine`, `nvim`, `ghostty`, `rules`, `skills`, `dott`) - open the file you'd change
-- `refresh` - shows the incoming commits, the items they touch and the diff of every changed
-  script, then pulls and fixes after one yes
+- `refresh` - fetches, shows the incoming commits, the items they touch and the diff of every
+  changed script, asks `Pull?`, then shows the fix plan and asks again
 - `permissions claude` (also codex, opencode, pi) - what each agent may do without asking, risky rules flagged; read-only
-- `summary` - the counts, what needs you, and optional clean-ups (git settings you also set in
-  the repo, packages the Brewfile doesn't list)
+
+The header has the counts. The optional clean-ups are notes in an item's view: git settings you
+also set in the repo (`git-include`), and packages the Brewfile doesn't list (`brew`).
 
 If the machine already has an oh-my-zsh theme or powerlevel10k, the starship prompt is skipped,
 and a `~/.config/starship.toml` of your own is used instead of the repo's.
