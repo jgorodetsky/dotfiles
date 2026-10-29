@@ -10,6 +10,10 @@ aws = "the AWS CLI and one SSO login for every account (awssetup)"
 kube = "kubectl and helm"
 macos = "macOS settings: key repeat, file extensions, screenshots folder, cmd+1 apps, ctrl+opt tiling"
 ghostty-theme = "the ChessKing theme and board in Ghostty (only when you have no theme of your own)"
+clipfmt-pr = "clipfmt: a copied GitHub PR link pastes in Slack as PR#1234-repo (terminals still get the URL)"
+clipfmt-issue = "clipfmt: a copied GitHub issue link pastes in Slack as #56-repo"
+clipfmt-jira = "clipfmt: a copied Jira link pastes in Slack as DEV-1900"
+clipfmt-confluence = "clipfmt: a copied Confluence page link pastes in Slack as SPACE: Page title"
 
 [paths.ghostty-config]
 first_existing = ["~/Library/Application Support/com.mitchellh.ghostty/config", "${XDG_CONFIG_HOME:-~/.config}/ghostty/config"]
@@ -207,6 +211,56 @@ check = ["bash", "{{repo}}/bin/awssetup", "--check"]
 plan_text = ["run awssetup: it asks for your SSO start URL, opens the browser to log in, then writes a profile per account"]
 apply = ["{{repo}}/bin/awssetup"]
 
+# clipfmt (clipfmt/): one item per link type, each in its own optional group. the first one you
+# turn on builds the program and starts it at login; turning the last one off removes it.
+[[item]]
+id = "clipfmt-pr"
+kind = "script"
+section = "macos"
+desc = "clipfmt: copied GitHub PR links paste in Slack as PR#1234-repo; terminals still get the full URL"
+group = "clipfmt-pr"
+when = { os = "darwin" }
+check = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--check", "pr"]
+plan = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--plan", "pr"]
+apply = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "enable", "pr"]
+undo = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "disable", "pr"]
+
+[[item]]
+id = "clipfmt-issue"
+kind = "script"
+section = "macos"
+desc = "clipfmt: copied GitHub issue links paste in Slack as #56-repo; terminals still get the full URL"
+group = "clipfmt-issue"
+when = { os = "darwin" }
+check = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--check", "issue"]
+plan = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--plan", "issue"]
+apply = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "enable", "issue"]
+undo = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "disable", "issue"]
+
+[[item]]
+id = "clipfmt-jira"
+kind = "script"
+section = "macos"
+desc = "clipfmt: copied Jira links paste in Slack as DEV-1900; terminals still get the full URL"
+group = "clipfmt-jira"
+when = { os = "darwin" }
+check = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--check", "jira"]
+plan = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--plan", "jira"]
+apply = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "enable", "jira"]
+undo = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "disable", "jira"]
+
+[[item]]
+id = "clipfmt-confluence"
+kind = "script"
+section = "macos"
+desc = "clipfmt: copied Confluence page links paste in Slack as SPACE: Page title; terminals still get the full URL"
+group = "clipfmt-confluence"
+when = { os = "darwin" }
+check = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--check", "confluence"]
+plan = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "--plan", "confluence"]
+apply = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "enable", "confluence"]
+undo = ["bash", "{{repo}}/clipfmt/clipfmt.sh", "disable", "confluence"]
+
 [aliases]
 repo_file = "shell/.zshrc"
 local_file = "~/.zshrc.local"
@@ -259,6 +313,11 @@ desc = "Ghostty tab rules"
 name = "rules"
 file = "agents/AGENTS.md"
 desc = "the rules every agent tool reads"
+
+[[edit]]
+name = "clipfmt"
+file = "clipfmt/rules.tsv"
+desc = "what copied links paste as; it reloads by itself"
 
 [[edit]]
 name = "skills"

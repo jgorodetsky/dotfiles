@@ -22,7 +22,7 @@ install.sh                                   every day after
      clones this repo to ~/dotfiles                ▼
   4  dott asks once about the optional parts   refresh
      (AWS, kube, the macOS settings, the         the new commits, the items they touch and
-     ChessKing theme)                            the diff of every changed script
+     ChessKing theme, clipfmt's link types)      the diff of every changed script
         │                                          │ Pull? [Y/n]
         ▼                                          ▼
      fix everything                            git pull --ff-only, then the fix plan
@@ -58,6 +58,7 @@ Safe to re-run and safe to `git pull` over an existing setup.
 | `macos` (optional) | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
 | `aws` (optional) | Runs `awssetup`, which asks its own questions and writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
+| `clipfmt-pr`, `clipfmt-issue`, `clipfmt-jira`, `clipfmt-confluence` (optional, one group each) | The first one you turn on builds `~/.local/bin/clipfmt` with `swiftc` (Xcode's command line tools), checks every row of `clipfmt/cases.tsv`, and starts it at login (`~/Library/LaunchAgents/io.github.jgorodetsky.clipfmt.plist`). Each one adds its type to `~/.config/clipfmt/enabled`. Turning a group off takes its type out again; turning the last one off stops clipfmt and removes the program and the agent. See [clipfmt](#clipfmt). |
 | `brew` | Installs the Brewfile's packages that are missing. Nothing is uninstalled or upgraded. Entries marked `trusted: true` are trusted first (Homebrew 6+ refuses third-party formulae until they are): only those exact formulae, not the whole tap. awscli, kubectl and helm are in the optional groups. |
 
 Every fix backs up what it changes to `~/.local/state/dott/backups`; `restore a backup` puts it back.
@@ -98,7 +99,7 @@ next `dott` shows them as `shell-sort` and sorts them the same way.
 - `remove alias` - it finds every file that sets it and asks where: one of those files, all of
   them, or (for one the repo sets) only on this Mac, which adds an `unalias` line to
   `~/.zshrc.local` and leaves the repo alone
-- `edit shell` (also `local`, `profile`, `git`, `brew`, `mine`, `nvim`, `ghostty`, `rules`, `skills`, `dott`) - open the file you'd change
+- `edit shell` (also `local`, `profile`, `git`, `brew`, `mine`, `nvim`, `ghostty`, `rules`, `clipfmt`, `skills`, `dott`) - open the file you'd change
 - `refresh` - fetches, shows the incoming commits, the items they touch and the diff of every
   changed script, asks `Pull?`, then shows the fix plan and asks again
 - `permissions claude` (also codex, opencode, pi) - what each agent may do without asking, risky rules flagged; read-only
@@ -207,6 +208,40 @@ falls back to plain `less`. Set in `git/.gitconfig`.
 `lg` and Neovim's `space g g` use `lazygit/config.yml`, plus your own lazygit `config.yml` if you
 have one (yours wins).
 
+## clipfmt
+
+Copy a GitHub, Jira or Confluence link, and Slack shows a short link instead of the whole URL.
+A terminal still gets the full URL.
+
+| You copy | Slack shows (a link to the full URL) |
+|---|---|
+| `https://github.com/owner/dott/pull/1234` | PR#1234-dott |
+| `https://github.com/owner/dott/issues/56` | #56-dott |
+| `https://<your site>/browse/DEV-1900`, or a board with `?selectedIssue=DEV-1900` | DEV-1900 |
+| `https://<your site>/wiki/spaces/OPS/pages/123/Deploy+runbook` | OPS: Deploy runbook |
+
+```
+copy a link ──▶ clipfmt (4 checks a second, at login)
+                  │ is it one https link? macOS says so without clipfmt reading it
+                  │ does an enabled rule match it?
+                  ▼
+clipboard = rich text  <a href="full URL">PR#1234-dott</a>  ──▶ Slack, Mail, Notes: the short link
+          + plain text  the full URL                         ──▶ Ghostty, any terminal: the URL
+```
+
+- Each link type is its own optional group (`clipfmt-pr`, `clipfmt-issue`, `clipfmt-jira`,
+  `clipfmt-confluence`). Turn them on or off in `dott` under `optional parts`.
+- The rules are in `clipfmt/rules.tsv`, one line per pattern, and clipfmt reloads the file by
+  itself (`dott edit clipfmt`). `clipfmt test <url>` shows what a link becomes; the top of the file
+  has the rebuild line for a change to `clipfmt.swift`.
+- It leaves alone: a copy from a password manager, a copy that already has its own formatting,
+  anything that isn't exactly one https link, and every other kind of link. It never logs what
+  you copy and never uses the network. The Jira and Confluence rules match the link's path on any
+  site, so no company address is in this repo.
+- The first time it shortens a link, macOS asks whether clipfmt may paste from other apps. Pick
+  allow. After a rebuild macOS can ask once more.
+- Apps that read rich text all get the short link: Slack, but also Mail, Notes and Google Docs.
+
 ## Ghostty tabs
 
 Each tab's title shows a status dot, an icon for what's running, and a name:
@@ -246,6 +281,7 @@ Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghos
 | `git/ignore` | lines added to your global git ignore file |
 | `git/.gitconfig` | git behavior only, no identity (see below); delta draws diffs |
 | `lazygit/config.yml` | lazygit settings: delta diffs, side by side on `\|` |
+| `clipfmt/` | clipfmt (above): `clipfmt.swift`, the rules, the test cases and `clipfmt.sh`, which builds, installs and checks it for dott |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer); `--check` and `--plan` for dott |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |
 | `generator/` | re-renders the ChessKing board image |
