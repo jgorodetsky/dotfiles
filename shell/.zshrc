@@ -103,22 +103,35 @@ ccupdate() {
 
 # power - charger watts vs what the mac uses, then the top energy users (power 25 shows more)
 power() {
-  local io name watts in load amp volt pct pid cpu imp
+  local io ad conn name watts in load amp volt bat pct stale=0 pid cpu imp
   io=$(ioreg -rw0 -c AppleSmartBattery)
-  name=$(print -r -- "$io" | grep -o '"Name"="[^"]*"' | head -1 | cut -d'"' -f4)
-  watts=$(print -r -- "$io" | grep -o '"Watts"=[0-9]*' | head -1 | cut -d= -f2)
+  # read the charger's own section: other sections (like power sent out to a usb device) also have Watts
+  ad=$(print -r -- "$io" | grep '^ *"AdapterDetails" = ')
+  name=$(print -r -- "$ad" | grep -o '"Name"="[^"]*"' | head -1 | cut -d'"' -f4)
+  watts=$(print -r -- "$ad" | grep -o '"Watts"=[0-9]*' | head -1 | cut -d= -f2)
+  conn=$(print -r -- "$io" | awk -F' = ' '/^ *"ExternalConnected" = /{print $2}')
   in=$(print -r -- "$io" | grep -o '"SystemPowerIn"=[0-9]*' | cut -d= -f2)
   load=$(print -r -- "$io" | grep -o '"SystemLoad"=[0-9]*' | cut -d= -f2)
   amp=$(print -r -- "$io" | awk -F' = ' '/"Amperage" = /{print $2}')
   volt=$(print -r -- "$io" | awk -F' = ' '/"Voltage" = /{print $2}')
   # ioreg prints negative amps as unsigned 64-bit
   (( ${#amp} > 10 )) && amp=-$(bc <<< "18446744073709551616 - $amp")
+  bat=$(( ${amp:-0} * ${volt:-0} / 1e6 ))
   pct=$(pmset -g batt | grep -o '[0-9]*%')
-  printf 'charger:        %s\n' "${name:-not connected}"
-  printf 'charger agreed: %sW\n' "${watts:-0}"
-  printf 'charger giving: %.1fW\n' $(( ${in:-0} / 1000.0 ))
+  # the connected flag changes at once, the power readings up to a minute later
+  if [[ $conn == Yes ]]; then
+    printf 'charger:        %s\n' "${name:-unknown}"
+    printf 'charger agreed: %sW\n' "${watts:-0}"
+    printf 'charger giving: %.1fW\n' $(( ${in:-0} / 1000.0 ))
+    (( ${in:-0} > 0 )) || stale=1
+  else
+    print 'charger:        not connected'
+    (( bat <= 0 )) || stale=1
+  fi
   printf 'mac using:      %.1fW\n' $(( ${load:-0} / 1000.0 ))
-  printf 'battery:        %+.1fW at %s (+ charging, - draining)\n\n' $(( ${amp:-0} * ${volt:-0} / 1e6 )) "$pct"
+  printf 'battery:        %+.1fW at %s (+ charging, - draining)\n' $bat "$pct"
+  (( stale )) && print 'readings still catching up after the charger change - run power again in a minute'
+  print
   # top's first sample has no cpu history, so read the second one
   { print -r -- $'pid\tname\tcpu %\timpact\twhat it is / where it lives\trunning for'
     top -l 2 -s 2 -o power -n ${1:-15} -stats pid,cpu,power | awk '/^PID/{n++; next} n == 2 && NF == 3' |
