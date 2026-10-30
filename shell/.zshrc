@@ -101,9 +101,9 @@ ccupdate() {
   fi
 }
 
-# power - charger watts vs what the mac uses, then the top energy users (power 25 shows more)
+# power - charger watts vs what the mac uses, then press e for the top energy users (power 25 lists more)
 power() {
-  local io ad conn name watts in load amp volt bat pct stale=0 pid cpu imp
+  local io ad conn name watts in load amp volt bat pct stale=0 key rows pid cpu imp
   io=$(ioreg -rw0 -c AppleSmartBattery)
   # read the charger's own section: other sections (like power sent out to a usb device) also have Watts
   ad=$(print -r -- "$io" | grep '^ *"AdapterDetails" = ')
@@ -131,15 +131,24 @@ power() {
   printf 'mac using:      %.1fW\n' $(( ${load:-0} / 1000.0 ))
   printf 'battery:        %+.1fW at %s (+ charging, - draining)\n' $bat "$pct"
   (( stale )) && print 'readings still catching up after the charger change - run power again in a minute'
+  # in a terminal, wait for a key; piped, print everything
+  if [[ -t 0 && -t 1 ]]; then
+    print -n 'e  show the top energy users    q  quit '
+    read -sk1 key
+    print -n '\r\e[K'
+    [[ $key == [eE] ]] || return 0
+    print -n 'measuring for 2 seconds...'
+  fi
+  # top's first sample has no cpu history, so read the second one; skip pids that exited since
+  rows=$(top -l 2 -s 2 -o power -n ${1:-15} -stats pid,cpu,power | awk '/^PID/{n++; next} n == 2 && NF == 3' |
+    while read -r pid cpu imp; do
+      ps -p $pid >/dev/null 2>&1 || continue
+      print -r -- "$pid"$'\t'"$(ps -o comm= -p $pid | sed 's|.*/||')"$'\t'"$cpu"$'\t'"$imp"$'\t'"$(_proc_what $pid)"$'\t'"$(_proc_age $pid)"
+    done)
+  [[ -t 1 ]] && print -n '\r\e[K'
   print
-  # top's first sample has no cpu history, so read the second one
-  { print -r -- $'pid\tname\tcpu %\timpact\twhat it is / where it lives\trunning for'
-    top -l 2 -s 2 -o power -n ${1:-15} -stats pid,cpu,power | awk '/^PID/{n++; next} n == 2 && NF == 3' |
-      while read -r pid cpu imp; do
-        ps -p $pid >/dev/null 2>&1 || continue   # exited since top looked
-        print -r -- "$pid"$'\t'"$(ps -o comm= -p $pid | sed 's|.*/||')"$'\t'"$cpu"$'\t'"$imp"$'\t'"$(_proc_what $pid)"$'\t'"$(_proc_age $pid)"
-      done
-  } | if (( $+commands[boxtable] )); then boxtable --plain --no-sort; else column -t -s $'\t'; fi
+  { print -r -- $'pid\tname\tcpu %\timpact\twhat it is / where it lives\trunning for'; print -r -- "$rows"; } |
+    if (( $+commands[boxtable] )); then boxtable --plain --no-sort; else column -t -s $'\t'; fi
   print 'cpu % = share of one core (100 = one core flat out). impact = energy score, not watts.'
   print 'pinfo <pid> - what it is, who started it, how to look deeper or stop it'
 }
