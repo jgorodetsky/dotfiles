@@ -1,16 +1,19 @@
-# url <TAB> what it must paste as in Slack (- for unchanged). bash clipfmt.sh test runs every row.
-https://github.com/jgorodetsky/dott/pull/1234	pr: PR#1234-dott
+# links that a rule must or must not change, on top of each rule's own example in rules.tsv.
+# url <TAB> what it pastes as: id: text, or - for unchanged. bash clipfmt.sh test runs every row.
 https://github.com/jgorodetsky/dott/pull/12/files#diff-abc	pr: PR#12-dott
-https://github.com/jgorodetsky/dott/issues/56	issue: #56-dott
+https://GitHub.com/jgorodetsky/dott/pull/12	pr: PR#12-dott
 https://github.com/jgorodetsky/dott/issues/56?q=1	issue: #56-dott
-https://example.atlassian.net/browse/DEV-1900	jira: DEV-1900
+https://gitlab.com/acme/platform/web/-/merge_requests/7/diffs	gitlab-mr: !7-web
 https://jira.example.com/browse/DEV-1900?focusedCommentId=1	jira: DEV-1900
-https://example.atlassian.net/jira/software/projects/DEV/boards/7?selectedIssue=DEV-1901	jira: DEV-1901
-https://example.atlassian.net/wiki/spaces/OPS/pages/123456/Deploy+runbook	confluence: OPS: Deploy runbook
 https://example.atlassian.net/wiki/spaces/OPS/pages/123456/Deploy%3A+step+2?focusedCommentId=9	confluence: OPS: Deploy: step 2
+https://example.atlassian.net/wiki/spaces/OPS/pages/123456/Pre-deploy+checklist	confluence: OPS: Pre-deploy checklist
+https://linear.app/acme/issue/ENG-9/add-dark_mode#comment-1	linear: ENG-9: add dark mode
 https://github.com/jgorodetsky/dott	-
 https://github.com/jgorodetsky/dott/pulls	-
+https://github.com/jgorodetsky/dott/pull/files	-
 http://github.com/jgorodetsky/dott/pull/1	-
+https://github.com.evil.example/o/r/pull/1	-
 https://example.atlassian.net/wiki/spaces/OPS/pages/123456	-
 https://example.com/browse/lowercase-1	-
+https://linear.app/acme/issue/ENG-123	-
 see https://github.com/o/r/pull/1	-

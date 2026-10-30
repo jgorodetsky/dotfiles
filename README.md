@@ -22,7 +22,7 @@ install.sh                                   every day after
      clones this repo to ~/dotfiles                ▼
   4  dott asks once about the optional parts   refresh
      (AWS, kube, the macOS settings, the         the new commits, the items they touch and
-     ChessKing theme, clipfmt's link types)      the diff of every changed script
+     ChessKing theme)                            the diff of every changed script
         │                                          │ Pull? [Y/n]
         ▼                                          ▼
      fix everything                            git pull --ff-only, then the fix plan
@@ -58,7 +58,7 @@ Safe to re-run and safe to `git pull` over an existing setup.
 | `macos` (optional) | Changes eight settings: key repeat delay and speed, file extensions, screenshot folder, Cmd+1 opens the apps launcher, and Ctrl+Option+←/→ tiles a window to the left/right half. The first run saves your previous values to `~/.dotfiles-macos-defaults.bak`. |
 | `claude` | Installs Claude Code with the native installer only if `claude` isn't on your PATH. An existing install (native or Homebrew) is left alone. |
 | `aws` (optional) | Runs `awssetup`, which asks its own questions and writes only inside a marked block in `~/.aws/config`. See [AWS SSO](#aws-sso). |
-| `clipfmt-pr`, `clipfmt-issue`, `clipfmt-jira`, `clipfmt-confluence` (optional, one group each) | The first one you turn on builds `~/.local/bin/clipfmt` with `swiftc` (Xcode's command line tools), checks every row of `clipfmt/cases.tsv`, and starts it at login (`~/Library/LaunchAgents/io.github.jgorodetsky.clipfmt.plist`). Each one adds its type to `~/.config/clipfmt/enabled`. Turning a group off takes its type out again; turning the last one off stops clipfmt and removes the program and the agent. See [clipfmt](#clipfmt). |
+| `clipfmt` (each link rule is off until you turn it on in `dott clipfmt`) | The first rule you turn on builds `~/.local/bin/clipfmt` with `swiftc` (Xcode's command line tools), runs `clipfmt/test.sh`, and starts it at login (`~/Library/LaunchAgents/io.github.jgorodetsky.clipfmt.plist`). Each rule that is on is a line in `~/.config/clipfmt/enabled`. Turning the last one off stops clipfmt and removes the program and the agent; your rules stay. See [clipfmt](#clipfmt). |
 | `brew` | Installs the Brewfile's packages that are missing. Nothing is uninstalled or upgraded. Entries marked `trusted: true` are trusted first (Homebrew 6+ refuses third-party formulae until they are): only those exact formulae, not the whole tap. awscli, kubectl and helm are in the optional groups. |
 
 Every fix backs up what it changes to `~/.local/state/dott/backups`; `restore a backup` puts it back.
@@ -210,30 +210,50 @@ have one (yours wins).
 
 ## clipfmt
 
-Copy a GitHub, Jira or Confluence link, and Slack shows a short link instead of the whole URL.
-A terminal still gets the full URL.
+Copy a link, and Slack shows a short link instead of the whole URL. A terminal still gets the
+full URL. Every rule is off until you turn it on.
 
-| You copy | Slack shows (a link to the full URL) |
-|---|---|
-| `https://github.com/owner/dott/pull/1234` | PR#1234-dott |
-| `https://github.com/owner/dott/issues/56` | #56-dott |
-| `https://<your site>/browse/DEV-1900`, or a board with `?selectedIssue=DEV-1900` | DEV-1900 |
-| `https://<your site>/wiki/spaces/OPS/pages/123/Deploy+runbook` | OPS: Deploy runbook |
+| Rule | You copy | Slack shows (a link to the full URL) |
+|---|---|---|
+| `pr` | `https://github.com/owner/dott/pull/1234` | PR#1234-dott |
+| `issue` | `https://github.com/owner/dott/issues/56` | #56-dott |
+| `gitlab-mr` | `https://gitlab.com/acme/web/-/merge_requests/7` | !7-web |
+| `jira` | `https://<your site>/browse/DEV-1900`, or a board with `?selectedIssue=DEV-1900` | DEV-1900 |
+| `confluence` | `https://<your site>/wiki/spaces/OPS/pages/123/Deploy+runbook` | OPS: Deploy runbook |
+| `linear` | `https://linear.app/acme/issue/ENG-123/fix-login` | ENG-123: fix login |
 
 ```
 copy a link ──▶ clipfmt (4 checks a second, at login)
                   │ is it one https link? macOS says so without clipfmt reading it
-                  │ does an enabled rule match it?
+                  │ does a rule that is on match it?
                   ▼
 clipboard = rich text  <a href="full URL">PR#1234-dott</a>  ──▶ Slack, Mail, Notes: the short link
           + plain text  the full URL                         ──▶ Ghostty, any terminal: the URL
 ```
 
-- Each link type is its own optional group (`clipfmt-pr`, `clipfmt-issue`, `clipfmt-jira`,
-  `clipfmt-confluence`). Turn them on or off in `dott` under `optional parts`.
-- The rules are in `clipfmt/rules.tsv`, one line per pattern, and clipfmt reloads the file by
-  itself (`dott edit clipfmt`). `clipfmt test <url>` shows what a link becomes; the top of the file
-  has the rebuild line for a change to `clipfmt.swift`.
+`dott clipfmt` shows each rule as a row, and `dott clipfmt linear` opens one:
+
+```
+clipfmt ›
+  · pr                off   github.com/…/pull/1234 → PR#1234-dott · preset
+  · linear            off   linear.app/…/ENG-123/fix-login → ENG-123: fix login · preset
+  ▸ add a link rule         any site, from one example link: this Mac only or every machine
+  ▸ test a link             what a copied link pastes as, as you type it
+```
+
+- A rule's own view turns it on or off, changes its format with a live preview, or removes it.
+- `add a link rule` starts from one example link, and needs no regex. clipfmt numbers the link's
+  parts, you pick the parts that change from link to link, and you write the format with those
+  numbers: `{3}: {4:words}` makes ENG-123: fix login. `{N:words}` turns `-`, `_` or `+` into
+  spaces, and `{host}` is the link's host.
+- A new rule goes to this Mac only (`~/.config/clipfmt/local.tsv`, the default) or to every
+  machine (`clipfmt/rules.tsv` in this repo, which is public). A Jira or Confluence address can
+  name an employer, so a rule for every machine shows its exact line first, and a host other than
+  github.com, gitlab.com or linear.app needs a typed yes.
+- A new format for a preset is this Mac's own copy. Remove it, and the preset comes back.
+- clipfmt reloads both rules files by itself. `bash clipfmt/clipfmt.sh test` builds it in a temp
+  folder and checks each rule's example, `clipfmt/cases.tsv` and the flows. After a change to
+  `clipfmt.swift`, run `bash clipfmt/clipfmt.sh rebuild`.
 - It leaves alone: a copy from a password manager, a copy that already has its own formatting,
   anything that isn't exactly one https link, and every other kind of link. It never logs what
   you copy and never uses the network. The Jira and Confluence rules match the link's path on any
@@ -281,7 +301,7 @@ Lives in `shell/tabs.zsh` and `ghostty/tabs.conf`, and does nothing outside Ghos
 | `git/ignore` | lines added to your global git ignore file |
 | `git/.gitconfig` | git behavior only, no identity (see below); delta draws diffs |
 | `lazygit/config.yml` | lazygit settings: delta diffs, side by side on `\|` |
-| `clipfmt/` | clipfmt (above): `clipfmt.swift`, the rules, the test cases and `clipfmt.sh`, which builds, installs and checks it for dott |
+| `clipfmt/` | clipfmt (above): `clipfmt.swift`, the presets (`rules.tsv`), `cases.tsv`, `clipfmt.sh` (builds, installs and checks it for dott), `flows.sh` (the add, format and test questions) and `test.sh` |
 | `macos/defaults.sh` | key repeat, file extensions, screenshots (reloads Finder/SystemUIServer); `--check` and `--plan` for dott |
 | `ghostty/` | ChessKing + Cadillac themes and the `gtheme` picker (see `ghostty/README.md`) |
 | `generator/` | re-renders the ChessKing board image |

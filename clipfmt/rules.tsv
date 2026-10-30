@@ -1,13 +1,20 @@
 # clipfmt rules: what a copied link pastes as in apps that read rich text, like Slack.
-# one line per pattern: type <TAB> pattern (the whole URL) <TAB> short text ($1, $2: the groups).
-# the short text is URL-decoded and + becomes a space. a type can have more than one line.
-#   test a link:     clipfmt test 'https://github.com/o/r/pull/1'
-#   check them all:  bash ~/dotfiles/clipfmt/clipfmt.sh test   (cases.tsv)
-#   this file reloads by itself. after editing clipfmt.swift: bash ~/dotfiles/clipfmt/clipfmt.sh rebuild
-# a type works only when dott turned it on (its clipfmt-<type> group). other links stay as they are.
+# id <TAB> pattern (the whole link) <TAB> format <TAB> an example link <TAB> what the example pastes as
+# in a format, {1} {2}... are the pattern's groups (URL-decoded), {1:words} the same with its
+# - _ or + as spaces, and {host} the link's host. $ and \ are as typed. an id can have more
+# than one line, with one format.
+# every rule is off until you turn it on in dott clipfmt, which can also add a rule from an
+# example link. rules for this Mac only go in ~/.config/clipfmt/local.tsv (same columns); a
+# line there hides this file's lines with its id. clipfmt reloads both by itself.
+#   bash ~/dotfiles/clipfmt/clipfmt.sh test   checks each example pastes as its last column
 
-pr	^https://github\.com/[^/]+/([^/]+)/pull/([0-9]+)([/?#].*)?$	PR#$2-$1
-issue	^https://github\.com/[^/]+/([^/]+)/issues/([0-9]+)([/?#].*)?$	#$2-$1
-jira	^https://[^/]+/browse/([A-Z][A-Z0-9]+-[0-9]+)([/?#].*)?$	$1
-jira	^https://[^/]+/.*[?&]selectedIssue=([A-Z][A-Z0-9]+-[0-9]+)([&#].*)?$	$1
-confluence	^https://[^/]+/wiki/spaces/([^/]+)/pages/[0-9]+/([^/?#]+)([/?#].*)?$	$1: $2
+# presets
+pr	^https://(?i:github\.com)/([^/?#]+)/([^/?#]+)/pull/([0-9]+)(?:[/?#].*)?$	PR#{3}-{2}	https://github.com/jgorodetsky/dott/pull/1234	PR#1234-dott
+issue	^https://(?i:github\.com)/([^/?#]+)/([^/?#]+)/issues/([0-9]+)(?:[/?#].*)?$	#{3}-{2}	https://github.com/jgorodetsky/dott/issues/56	#56-dott
+gitlab-mr	^https://(?i:gitlab\.com)/(.+)/([^/?#]+)/-/merge_requests/([0-9]+)(?:[/?#].*)?$	!{3}-{2}	https://gitlab.com/acme/web/-/merge_requests/7	!7-web
+jira	^https://[^/?#]+/browse/([A-Z][A-Z0-9]+-[0-9]+)(?:[/?#].*)?$	{1}	https://example.atlassian.net/browse/DEV-1900	DEV-1900
+jira	^https://[^/?#]+/[^?#]*[?&]selectedIssue=([A-Z][A-Z0-9]+-[0-9]+)(?:[&#].*)?$	{1}	https://example.atlassian.net/jira/software/projects/DEV/boards/7?selectedIssue=DEV-1901	DEV-1901
+confluence	^https://[^/?#]+/wiki/spaces/([^/?#]+)/pages/[0-9]+/([^/?#]+)(?:[/?#].*)?$	{1}: {2:words}	https://example.atlassian.net/wiki/spaces/OPS/pages/123456/Deploy+runbook	OPS: Deploy runbook
+linear	^https://(?i:linear\.app)/([^/?#]+)/issue/([A-Z][A-Z0-9]*-[0-9]+)/([^/?#]+)(?:[/?#].*)?$	{2}: {3:words}	https://linear.app/acme/issue/ENG-123/fix-login	ENG-123: fix login
+
+# your rules for every machine (dott clipfmt, add a link rule, adds them here)
