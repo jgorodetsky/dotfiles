@@ -101,6 +101,27 @@ ccupdate() {
   fi
 }
 
+# power - charger watts vs what the mac uses, then the top energy users (power 25 shows more)
+power() {
+  local io name watts in load amp volt pct
+  io=$(ioreg -rw0 -c AppleSmartBattery)
+  name=$(print -r -- "$io" | grep -o '"Name"="[^"]*"' | head -1 | cut -d'"' -f4)
+  watts=$(print -r -- "$io" | grep -o '"Watts"=[0-9]*' | head -1 | cut -d= -f2)
+  in=$(print -r -- "$io" | grep -o '"SystemPowerIn"=[0-9]*' | cut -d= -f2)
+  load=$(print -r -- "$io" | grep -o '"SystemLoad"=[0-9]*' | cut -d= -f2)
+  amp=$(print -r -- "$io" | awk -F' = ' '/"Amperage" = /{print $2}')
+  volt=$(print -r -- "$io" | awk -F' = ' '/"Voltage" = /{print $2}')
+  # ioreg prints negative amps as unsigned 64-bit
+  (( ${#amp} > 10 )) && amp=-$(bc <<< "18446744073709551616 - $amp")
+  pct=$(pmset -g batt | grep -o '[0-9]*%')
+  printf 'charger:        %s\n' "${name:-not connected}"
+  printf 'charger agreed: %sW\n' "${watts:-0}"
+  printf 'charger giving: %.1fW\n' $(( ${in:-0} / 1000.0 ))
+  printf 'mac using:      %.1fW\n' $(( ${load:-0} / 1000.0 ))
+  printf 'battery:        %+.1fW at %s (+ charging, - draining)\n\n' $(( ${amp:-0} * ${volt:-0} / 1e6 )) "$pct"
+  top -l 2 -s 2 -o power -n ${1:-15} -stats pid,command,cpu,power | awk '/^PID/{n++} n==2'
+}
+
 # fzf: ctrl-r history search, ctrl-t file picker with a bat preview,
 # alt-c (or esc then c) cd into a folder with a tree preview
 _fzf_file_preview='bat --style=numbers --color=always --line-range :500 {}'
