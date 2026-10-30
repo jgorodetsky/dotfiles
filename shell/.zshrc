@@ -103,7 +103,7 @@ ccupdate() {
 
 # power - charger watts vs what the mac uses, then the top energy users (power 25 shows more)
 power() {
-  local io name watts in load amp volt pct
+  local io name watts in load amp volt pct pid cpu imp
   io=$(ioreg -rw0 -c AppleSmartBattery)
   name=$(print -r -- "$io" | grep -o '"Name"="[^"]*"' | head -1 | cut -d'"' -f4)
   watts=$(print -r -- "$io" | grep -o '"Watts"=[0-9]*' | head -1 | cut -d= -f2)
@@ -119,7 +119,96 @@ power() {
   printf 'charger giving: %.1fW\n' $(( ${in:-0} / 1000.0 ))
   printf 'mac using:      %.1fW\n' $(( ${load:-0} / 1000.0 ))
   printf 'battery:        %+.1fW at %s (+ charging, - draining)\n\n' $(( ${amp:-0} * ${volt:-0} / 1e6 )) "$pct"
-  top -l 2 -s 2 -o power -n ${1:-15} -stats pid,command,cpu,power | awk '/^PID/{n++} n==2'
+  # top's first sample has no cpu history, so read the second one
+  { print -r -- $'pid\tname\tcpu %\timpact\twhat it is / where it lives\trunning for'
+    top -l 2 -s 2 -o power -n ${1:-15} -stats pid,cpu,power | awk '/^PID/{n++; next} n == 2 && NF == 3' |
+      while read -r pid cpu imp; do
+        ps -p $pid >/dev/null 2>&1 || continue   # exited since top looked
+        print -r -- "$pid"$'\t'"$(ps -o comm= -p $pid | sed 's|.*/||')"$'\t'"$cpu"$'\t'"$imp"$'\t'"$(_proc_what $pid)"$'\t'"$(_proc_age $pid)"
+      done
+  } | if (( $+commands[boxtable] )); then boxtable --plain --no-sort; else column -t -s $'\t'; fi
+  print 'cpu % = share of one core (100 = one core flat out). impact = energy score, not watts.'
+  print 'pinfo <pid> - what it is, who started it, how to look deeper or stop it'
+}
+
+# what a process is: the script an interpreter runs, the app it belongs to, or its command line
+_proc_what() {
+  local exe args
+  exe=$(ps -o comm= -p $1 2>/dev/null) || return
+  args=$(ps -o args= -p $1 2>/dev/null)
+  if [[ ${exe:t} == (Python|python*|node|ruby|perl|bash|sh|zsh|bun|deno|java) ]]; then
+    print -r -- "${exe:t} script: ${${args#* }//$HOME/~}"
+  elif [[ $exe == /System/*.app/* ]]; then
+    print -r -- "part of macOS: ${${exe%%.app/*}:t}.app"
+  elif [[ $exe == *.app/* ]]; then
+    print -r -- "part of ${${exe%%.app/*}//$HOME/~}.app"
+  elif [[ $exe == (/System|/usr/libexec|/usr/sbin|/sbin)/* ]]; then
+    print -r -- "part of macOS: ${exe:t}${args#$exe}"
+  else
+    print -r -- "${args//$HOME/~}"
+  fi
+}
+
+# how long a process has run, from ps etime ([dd-]hh:mm:ss) to "3d 4h", "5h 12m" or "7m"
+_proc_age() {
+  ps -o etime= -p $1 2>/dev/null | awk '{
+    d = 0; t = $1; if (t ~ /-/) { split(t, a, "-"); d = a[1]; t = a[2] }
+    n = split(t, b, ":"); h = (n == 3) ? b[1] : 0; m = (n == 3) ? b[2] : b[1]
+    if (d > 0) printf "%dd %dh\n", d, h; else if (h > 0) printf "%dh %dm\n", h, m; else printf "%dm\n", m }'
+}
+
+# pinfo - what a process is, who started it, and the commands to look deeper or stop it
+pinfo() {
+  local pid=${1:?usage: pinfo <pid>} exe args cwd p chain label plist copies macos=0
+  ps -p $pid >/dev/null 2>&1 || { print -r -- "no process $pid"; return 1; }
+  exe=$(ps -o comm= -p $pid); args=$(ps -o args= -p $pid)
+  # comm is only a name when the program was started by name, so ask for its file
+  [[ $exe == /* ]] || exe=$(lsof -a -p $pid -d txt -Fn 2>/dev/null | sed -n 's/^n//p' | head -1)
+  cwd=$(lsof -a -p $pid -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')
+  p=$pid
+  while p=$(ps -o ppid= -p $p 2>/dev/null | tr -d ' ') && (( p > 1 )); do
+    chain+="${chain:+ <- }$(ps -o comm= -p $p | sed 's|.*/||') ($p)"
+  done
+  label=$(launchctl list 2>/dev/null | awk -v p=$pid '$1 == p {print $3}')
+  [[ -n $label ]] && plist=$(launchctl print gui/$UID/$label 2>/dev/null | awk -F' = ' '$1 ~ /^\tpath$/ {print $2; exit}')
+  [[ $pid == 1 || $label == com.apple.* || $exe == (/System|/usr/libexec|/usr/sbin|/sbin)/* ]] && macos=1
+  copies=$(ps -axo args= | grep -cxF -- "$args")
+  print -r -- "what:       $(_proc_what $pid)"
+  print -r -- "program:    ${exe//$HOME/~}"
+  print -r -- "command:    ${args//$HOME/~}"
+  print -r -- "folder:     ${${cwd:-unknown}//$HOME/~}"
+  print -r -- "started:    $(ps -o lstart= -p $pid | sed 's/ *$//') ($(_proc_age $pid) ago)"
+  print -r -- "now:        $(ps -o %cpu= -p $pid | tr -d ' ')% cpu, $(( $(ps -o rss= -p $pid) / 1024 )) MB memory, $(lsof -a -i -p $pid 2>/dev/null | tail -n +2 | wc -l | tr -d ' ') network connections"
+  if [[ -n $label ]]; then
+    print -r -- "started by: launchd job $label - it starts again if you only kill it"
+    [[ -n $plist ]] && print -r -- "job file:   ${plist//$HOME/~}"
+  elif (( macos )); then
+    print -r -- "started by: macOS"
+  elif [[ -n $chain ]]; then
+    print -r -- "started by: $chain"
+  elif [[ $exe == *.app/* ]]; then
+    print -r -- "started by: you opened the app"
+  else
+    print -r -- "started by: nothing now - whatever started it has exited (an orphan)"
+  fi
+  (( copies > 1 )) && print -r -- "copies:     $copies running with this exact command"
+  print
+  print -r -- "look deeper"
+  print -r -- "  sample $pid 3          the code it is running right now, for 3 seconds"
+  print -r -- "  lsof -p $pid           every file and network connection it has open"
+  print -r -- "stop it"
+  if (( macos )); then
+    print -r -- "  leave it - it is part of macOS"
+  elif [[ -n $label ]]; then
+    print -r -- "  launchctl bootout gui/$UID/$label    stops it until your next login"
+    [[ $plist == $HOME/* ]] && print -r -- "  then move ${plist//$HOME/~} out of that folder to stop it for good"
+  elif [[ -z $chain && $exe == *.app/* ]]; then
+    print -r -- "  quit ${${exe%%.app/*}:t} the normal way (cmd+q)"
+  else
+    print -r -- "  kill $pid              asks it to quit (try this first)"
+    print -r -- "  kill -9 $pid           forces it, if it ignores that"
+    (( copies > 1 )) && print -r -- "  pkill -fx '${args}'   stops every copy with this exact command"
+  fi
 }
 
 # fzf: ctrl-r history search, ctrl-t file picker with a bat preview,
