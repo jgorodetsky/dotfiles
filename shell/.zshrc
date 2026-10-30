@@ -133,6 +133,7 @@ power() {
   (( stale )) && print 'readings still catching up after the charger change - run power again in a minute'
   # in a terminal, wait for a key; piped, print everything
   if [[ -t 0 && -t 1 ]]; then
+    print -r -- $'\n'${(l:40::─:)}
     print -n 'e  show the top energy users    q  quit '
     read -sk1 key
     print -n '\r\e[K'
